@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
 import { ThemeToggle } from './ThemeToggle';
-import { Search } from 'lucide-react';
+import { LogOut, Search } from 'lucide-react';
 import { Input } from './ui/input';
+import { Button } from './ui/button';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface NavbarProps {
     onSearch?: (query: string) => void;
@@ -9,10 +11,19 @@ interface NavbarProps {
 
 const Navbar = ({ onSearch }: NavbarProps) => {
     const [searchQuery, setSearchQuery] = useState('');
+    const { logout } = useAuth();
 
     const handleSearch = (e: React.FormEvent) => {
         e.preventDefault();
         onSearch?.(searchQuery);
+    };
+
+    const handleLogout = async () => {
+        try {
+            await logout();
+        } catch (error) {
+            console.error('Logout failed:', error);
+        }
     };
 
     return (
@@ -42,9 +53,17 @@ const Navbar = ({ onSearch }: NavbarProps) => {
                         </form>
                     </div>
 
-                    {/* Right - Theme Toggle */}
-                    <div className="flex-shrink-0">
+                    {/* Right - Theme Toggle and Logout */}
+                    <div className="flex-shrink-0 flex items-center gap-4">
                         <ThemeToggle />
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={handleLogout}
+                            className="text-muted-foreground hover:text-foreground"
+                        >
+                            <LogOut className="h-5 w-5" />
+                        </Button>
                     </div>
                 </div>
             </div>

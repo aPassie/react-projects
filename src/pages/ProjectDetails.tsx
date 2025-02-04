@@ -4,6 +4,8 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { ArrowLeft, Clock, FileText, Code, AlertCircle, Link as LinkIcon, Play, CheckCircle } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
+import { useToast } from '@/components/ui/use-toast';
 
 interface ProjectStep {
   title: string;
@@ -30,6 +32,7 @@ const MOCK_PROJECT_DATA = {
   'todo-app': {
     title: 'Todo App',
     description: 'Build a simple todo application to learn React basics, components, and state management.',
+    difficulty: 'beginner',
     prerequisites: ['Basic JavaScript', 'HTML & CSS', 'React Fundamentals'],
     duration: '2-3 hours',
     techStack: ['React', 'TypeScript', 'Tailwind CSS'],
@@ -64,6 +67,7 @@ const TodoList = () => {
   'counter-app': {
     title: 'Counter App',
     description: 'Build a simple counter application to understand React state management and event handling.',
+    difficulty: 'beginner',
     prerequisites: ['Basic JavaScript', 'React Fundamentals'],
     duration: '1-2 hours',
     techStack: ['React', 'TypeScript', 'Tailwind CSS'],
@@ -116,6 +120,7 @@ const incrementByStep = () => setCount(prev => prev + step);`,
   'weather-widget': {
     title: 'Weather Widget',
     description: 'Create a weather widget that fetches and displays weather data from an API.',
+    difficulty: 'intermediate',
     prerequisites: ['React Fundamentals', 'API Integration', 'Async JavaScript'],
     duration: '3-4 hours',
     techStack: ['React', 'TypeScript', 'Tailwind CSS', 'OpenWeather API'],
@@ -194,6 +199,7 @@ const fetchWeather = async (city: string): Promise<WeatherData> => {
   'shopping-cart': {
     title: 'Shopping Cart',
     description: 'Create a fully functional shopping cart with product listing, cart management, and checkout process.',
+    difficulty: 'advanced',
     prerequisites: ['React Fundamentals', 'State Management', 'React Context'],
     duration: '4-5 hours',
     techStack: ['React', 'TypeScript', 'Tailwind CSS', 'React Context'],
@@ -319,6 +325,7 @@ const CartItem = ({ item }: { item: CartItem }) => {
   'movie-search': {
     title: 'Movie Search App',
     description: 'Build a movie search application using the TMDB API with advanced features like infinite scrolling and favorites.',
+    difficulty: 'advanced',
     prerequisites: ['API Integration', 'React Query', 'Custom Hooks'],
     duration: '3-4 hours',
     techStack: ['React', 'TypeScript', 'Tailwind CSS', 'React Query', 'TMDB API'],
@@ -419,6 +426,7 @@ const useMovieSearch = (query: string) => {
   'task-manager': {
     title: 'Task Manager',
     description: 'Create a full-featured task management application with drag-and-drop, categories, and filters.',
+    difficulty: 'advanced',
     prerequisites: ['Advanced React', 'State Management', 'React DnD'],
     duration: '5-6 hours',
     techStack: ['React', 'TypeScript', 'Tailwind CSS', 'React DnD', 'Zustand'],
@@ -548,6 +556,7 @@ const Column = ({ status, tasks }: ColumnProps) => {
   'social-media-dashboard': {
     title: 'Social Media Dashboard',
     description: 'Create a social media dashboard with real-time updates and complex data visualization.',
+    difficulty: 'expert',
     prerequisites: ['Advanced React', 'WebSocket', 'Data Visualization'],
     duration: '8-10 hours',
     techStack: ['React', 'TypeScript', 'Tailwind CSS', 'Socket.io', 'D3.js', 'React Query'],
@@ -691,6 +700,7 @@ const useSocket = () => {
   'code-editor': {
     title: 'Code Editor',
     description: 'Build a web-based code editor with syntax highlighting and file system integration.',
+    difficulty: 'expert',
     prerequisites: ['Advanced React', 'Monaco Editor', 'File System API'],
     duration: '10-12 hours',
     techStack: ['React', 'TypeScript', 'Monaco Editor', 'File System API', 'Web Workers'],
@@ -862,6 +872,7 @@ const EditorToolbar = ({ onFormat, onSave }: EditorToolbarProps) => {
   'video-chat': {
     title: 'Video Chat App',
     description: 'Create a real-time video chat application using WebRTC and WebSocket signaling.',
+    difficulty: 'expert',
     prerequisites: ['WebRTC', 'Socket.io', 'Media Devices API'],
     duration: '12-15 hours',
     techStack: ['React', 'TypeScript', 'WebRTC', 'Socket.io', 'Tailwind CSS'],
@@ -1069,21 +1080,70 @@ const ProjectDetails = () => {
   const { projectId } = useParams();
   const project = projectId ? MOCK_PROJECT_DATA[projectId as keyof typeof MOCK_PROJECT_DATA] : null;
   const [isCompleted, setIsCompleted] = useState(false);
+  const { getUserProgress, updateUserProgress } = useAuth();
+  const { toast } = useToast();
+  const [isUpdating, setIsUpdating] = useState(false);
 
   useEffect(() => {
-    // Load completion status from localStorage
-    const completedProjects = JSON.parse(localStorage.getItem('completedProjects') || '{}');
-    setIsCompleted(!!completedProjects[projectId || '']);
-  }, [projectId]);
+    const fetchProgress = async () => {
+      const userProgress = await getUserProgress();
+      if (userProgress && projectId) {
+        const level = Object.keys(userProgress).find(key => 
+          userProgress[key][projectId]?.completed
+        );
+        setIsCompleted(!!level);
+      }
+    };
+    fetchProgress();
+  }, [projectId, getUserProgress]);
 
-  const toggleCompletion = () => {
-    const newStatus = !isCompleted;
-    setIsCompleted(newStatus);
+  const toggleCompletion = async () => {
+    if (!projectId || !project) return;
     
-    // Save to localStorage
-    const completedProjects = JSON.parse(localStorage.getItem('completedProjects') || '{}');
-    completedProjects[projectId || ''] = newStatus;
-    localStorage.setItem('completedProjects', JSON.stringify(completedProjects));
+    setIsUpdating(true);
+    try {
+      const newStatus = !isCompleted;
+      const userProgress = await getUserProgress();
+      
+      // Get the project level directly from the current project's difficulty
+      const projectLevel = project.difficulty;
+
+      // Update the progress in Firebase
+      const updatedProgress = {
+        ...userProgress,
+        [projectLevel]: {
+          ...(userProgress[projectLevel] || {}),
+          [projectId]: {
+            completed: newStatus,
+            completedAt: newStatus ? new Date().toISOString() : '',
+          },
+        },
+      };
+
+      await updateUserProgress(updatedProgress);
+      setIsCompleted(newStatus);
+
+      // Update localStorage for UI consistency
+      const completedProjects = JSON.parse(localStorage.getItem('completedProjects') || '{}');
+      completedProjects[projectId] = newStatus;
+      localStorage.setItem('completedProjects', JSON.stringify(completedProjects));
+
+      toast({
+        title: newStatus ? 'Project Completed! 🎉' : 'Project Status Updated',
+        description: newStatus 
+          ? 'Great job! Your progress has been updated.' 
+          : 'Project marked as incomplete.',
+      });
+    } catch (error) {
+      console.error('Error updating project status:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to update project status. Please try again.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsUpdating(false);
+    }
   };
 
   if (!project) {
@@ -1108,9 +1168,10 @@ const ProjectDetails = () => {
           onClick={toggleCompletion}
           variant={isCompleted ? "secondary" : "default"}
           className={`flex items-center gap-2 ${isCompleted ? 'bg-green-100 text-green-700 hover:bg-green-200' : ''}`}
+          disabled={isUpdating}
         >
           <CheckCircle className={`h-4 w-4 ${isCompleted ? 'text-green-700' : ''}`} />
-          {isCompleted ? 'Completed' : 'Mark as Complete'}
+          {isUpdating ? 'Updating...' : isCompleted ? 'Completed' : 'Mark as Complete'}
         </Button>
       </div>
 
@@ -1150,6 +1211,13 @@ const ProjectDetails = () => {
                 <li key={tech}>{tech}</li>
               ))}
             </ul>
+          </Card>
+          <Card className="p-6">
+            <div className="flex items-center gap-3 mb-4">
+              <AlertCircle className="h-5 w-5 text-primary" />
+              <h3 className="text-lg font-semibold">Difficulty</h3>
+            </div>
+            <p>{project.difficulty}</p>
           </Card>
         </div>
       </header>

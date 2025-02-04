@@ -1,27 +1,43 @@
 import { BarChart, Book, Trophy } from "lucide-react";
 import { Card, CardContent } from "./ui/card";
+import { useEffect, useState } from "react";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface ProgressTrackerProps {
-  progress: number;
-  completed: number;
-  total: number;
-  level: string;
+  level: 'beginner' | 'intermediate' | 'advanced';
+  onProgressUpdate?: () => void;
 }
 
 const levelRequirements = {
-  'Beginner': { next: 'Intermediate', required: 3 },
-  'Intermediate': { next: 'Advanced', required: 6 },
-  'Advanced': { next: 'Expert', required: 9 },
+  'beginner': { next: 'intermediate', required: 5 },
+  'intermediate': { next: 'advanced', required: 5 },
+  'advanced': { next: 'Expert', required: 5 },
   'Expert': { next: null, required: null },
 };
 
-const ProgressTracker = ({
-  progress = 33,
-  completed = 1,
-  total = 3,
-  level = "Beginner",
-}: ProgressTrackerProps) => {
-  const nextLevel = levelRequirements[level as keyof typeof levelRequirements];
+const ProgressTracker = ({ level, onProgressUpdate }: ProgressTrackerProps) => {
+  const { getUserProgress } = useAuth();
+  const [progress, setProgress] = useState(0);
+  const [completed, setCompleted] = useState(0);
+  const total = 5; // Total projects per level
+
+  useEffect(() => {
+    const fetchProgress = async () => {
+      const userProgress = await getUserProgress();
+      if (userProgress && userProgress[level]) {
+        const levelProjects = userProgress[level];
+        const completedCount = Object.values(levelProjects).filter(
+          (project: any) => project.completed
+        ).length;
+        setCompleted(completedCount);
+        setProgress((completedCount / total) * 100);
+      }
+    };
+
+    fetchProgress();
+  }, [getUserProgress, level]);
+
+  const nextLevel = levelRequirements[level];
   const remainingForNextLevel = nextLevel?.required ? nextLevel.required - completed : 0;
 
   return (
@@ -34,7 +50,7 @@ const ProgressTracker = ({
           </div>
           <div>
             <p className="text-sm text-muted-foreground">Progress</p>
-            <p className="text-2xl font-bold text-foreground">{progress}%</p>
+            <p className="text-2xl font-bold text-foreground">{Math.round(progress)}%</p>
           </div>
         </CardContent>
       </Card>
@@ -55,21 +71,16 @@ const ProgressTracker = ({
       {/* Next Level Card */}
       <Card className="bg-card border-border shadow-lg">
         <CardContent className="pt-6 flex items-center gap-4">
-          <div className="p-2 rounded-lg bg-amber-500/10">
-            <Trophy className="w-6 h-6 text-amber-500" />
+          <div className="p-2 rounded-lg bg-yellow-500/10">
+            <Trophy className="w-6 h-6 text-yellow-500" />
           </div>
           <div>
             <p className="text-sm text-muted-foreground">Next Level</p>
-            {nextLevel?.next ? (
-              <div>
-                <p className="text-2xl font-bold text-foreground">{nextLevel.next}</p>
-                <p className="text-sm text-muted-foreground">
-                  {remainingForNextLevel} more {remainingForNextLevel === 1 ? 'project' : 'projects'} to go
-                </p>
-              </div>
-            ) : (
-              <p className="text-2xl font-bold text-foreground">Max Level!</p>
-            )}
+            <p className="text-2xl font-bold text-foreground">
+              {remainingForNextLevel > 0
+                ? `${remainingForNextLevel} more to ${nextLevel.next}`
+                : "Level Complete!"}
+            </p>
           </div>
         </CardContent>
       </Card>
