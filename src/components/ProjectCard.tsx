@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { CheckCircle } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface ProjectCardProps {
   id: string;
@@ -10,7 +11,6 @@ interface ProjectCardProps {
   description: string;
   difficulty: 'beginner' | 'intermediate' | 'advanced';
   duration: string;
-  progress: number;
 }
 
 const difficultyColors = {
@@ -25,21 +25,37 @@ const ProjectCard: React.FC<ProjectCardProps> = ({
   description,
   difficulty,
   duration,
-  progress,
 }) => {
   const [isCompleted, setIsCompleted] = useState(false);
+  const { getUserProgress } = useAuth();
+
+  const checkCompletion = async () => {
+    try {
+      const userProgress = await getUserProgress();
+      // Check if the project exists in the correct difficulty level and is marked as completed
+      const isComplete = userProgress?.[difficulty]?.[id]?.completed ?? false;
+      setIsCompleted(isComplete);
+    } catch (error) {
+      console.error('Error checking project completion:', error);
+      setIsCompleted(false);
+    }
+  };
 
   useEffect(() => {
-    const completedProjects = JSON.parse(localStorage.getItem('completedProjects') || '{}');
-    setIsCompleted(!!completedProjects[id]);
-  }, [id]);
+    checkCompletion();
+    // Set up an interval to check for updates
+    const intervalId = setInterval(checkCompletion, 2000);
+    return () => clearInterval(intervalId);
+  }, [id, difficulty]);
 
   return (
     <Link to={`/project/${id}`} className="block">
-      <Card className={`p-6 h-full animate-fade-in hover:scale-[1.02] transition-transform bg-card border-border ${isCompleted ? 'bg-green-50 dark:bg-green-900/10' : ''}`}>
+      <Card className={`p-6 h-full hover:scale-[1.02] transition-transform ${
+        isCompleted ? 'bg-green-50 dark:bg-green-900/10 border-green-200 dark:border-green-900' : ''
+      }`}>
         <div className="flex justify-between items-start mb-4">
           <div className="flex items-center gap-2">
-            <Badge className={`${difficultyColors[difficulty]} border-none`}>
+            <Badge className={difficultyColors[difficulty]}>
               {difficulty.charAt(0).toUpperCase() + difficulty.slice(1)}
             </Badge>
             {isCompleted && (
@@ -51,14 +67,8 @@ const ProjectCard: React.FC<ProjectCardProps> = ({
           </div>
           <span className="text-sm text-muted-foreground">{duration}</span>
         </div>
-        <h3 className="mb-2 text-foreground">{title}</h3>
-        <p className="text-muted-foreground mb-4 line-clamp-2">{description}</p>
-        <div className="h-2 bg-muted rounded-full overflow-hidden">
-          <div 
-            className={`h-full rounded-full transition-all duration-300 ease-in-out ${isCompleted ? 'bg-green-500' : 'bg-primary'}`}
-            style={{ width: isCompleted ? '100%' : `${progress}%` }} 
-          />
-        </div>
+        <h3 className="mb-2 text-lg font-semibold">{title}</h3>
+        <p className="text-muted-foreground text-sm line-clamp-2">{description}</p>
       </Card>
     </Link>
   );

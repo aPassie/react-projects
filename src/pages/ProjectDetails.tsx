@@ -102,17 +102,6 @@ const TodoList = () => {
           'Think about step size customization',
         ],
       },
-      {
-        title: 'Adding Features',
-        description: 'Enhance the counter with additional features like reset and custom increment.',
-        code: `const [step, setStep] = useState<number>(1);
-const reset = () => setCount(0);
-const incrementByStep = () => setCount(prev => prev + step);`,
-        pitfalls: [
-          'Validate user input for custom step size',
-          'Consider adding max/min limits',
-        ],
-      },
     ],
     repoLink: 'https://github.com/example/counter-app',
     demoLink: 'https://counter-app-demo.example.com',
@@ -120,9 +109,9 @@ const incrementByStep = () => setCount(prev => prev + step);`,
   'weather-widget': {
     title: 'Weather Widget',
     description: 'Create a weather widget that fetches and displays weather data from an API.',
-    difficulty: 'intermediate',
+    difficulty: 'beginner',
     prerequisites: ['React Fundamentals', 'API Integration', 'Async JavaScript'],
-    duration: '3-4 hours',
+    duration: '2-3 hours',
     techStack: ['React', 'TypeScript', 'Tailwind CSS', 'OpenWeather API'],
     steps: [
       {
@@ -160,38 +149,6 @@ const fetchWeather = async (city: string): Promise<WeatherData> => {
           'Implement loading states',
         ],
       },
-      {
-        title: 'Creating the Weather Component',
-        description: 'Build the weather display component with search functionality.',
-        code: `const WeatherWidget = () => {
-  const [city, setCity] = useState<string>('');
-  const [weather, setWeather] = useState<WeatherData | null>(null);
-  const [loading, setLoading] = useState<boolean>(false);
-
-  const handleSearch = async () => {
-    try {
-      setLoading(true);
-      const data = await fetchWeather(city);
-      setWeather(data);
-    } catch (error) {
-      console.error('Failed to fetch weather:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  return (
-    <div className="p-4 rounded-lg shadow-lg">
-      {/* Implementation */}
-    </div>
-  );
-};`,
-        pitfalls: [
-          'Implement debouncing for search',
-          'Cache previous results',
-          'Add error boundaries',
-        ],
-      },
     ],
     repoLink: 'https://github.com/example/weather-widget',
     demoLink: 'https://weather-widget-demo.example.com',
@@ -199,7 +156,7 @@ const fetchWeather = async (city: string): Promise<WeatherData> => {
   'shopping-cart': {
     title: 'Shopping Cart',
     description: 'Create a fully functional shopping cart with product listing, cart management, and checkout process.',
-    difficulty: 'advanced',
+    difficulty: 'intermediate',
     prerequisites: ['React Fundamentals', 'State Management', 'React Context'],
     duration: '4-5 hours',
     techStack: ['React', 'TypeScript', 'Tailwind CSS', 'React Context'],
@@ -1086,16 +1043,20 @@ const ProjectDetails = () => {
 
   useEffect(() => {
     const fetchProgress = async () => {
-      const userProgress = await getUserProgress();
-      if (userProgress && projectId) {
-        const level = Object.keys(userProgress).find(key => 
-          userProgress[key][projectId]?.completed
-        );
-        setIsCompleted(!!level);
+      try {
+        const userProgress = await getUserProgress();
+        if (project && userProgress?.[project.difficulty]?.[projectId]?.completed) {
+          setIsCompleted(true);
+        } else {
+          setIsCompleted(false);
+        }
+      } catch (error) {
+        console.error('Error fetching progress:', error);
+        setIsCompleted(false);
       }
     };
     fetchProgress();
-  }, [projectId, getUserProgress]);
+  }, [projectId, getUserProgress, project]);
 
   const toggleCompletion = async () => {
     if (!projectId || !project) return;
@@ -1108,25 +1069,30 @@ const ProjectDetails = () => {
       // Get the project level directly from the current project's difficulty
       const projectLevel = project.difficulty;
 
+      // Initialize the level object if it doesn't exist
+      const currentLevelProgress = userProgress?.[projectLevel] || {};
+
       // Update the progress in Firebase
       const updatedProgress = {
         ...userProgress,
         [projectLevel]: {
-          ...(userProgress[projectLevel] || {}),
+          ...currentLevelProgress,
           [projectId]: {
             completed: newStatus,
-            completedAt: newStatus ? new Date().toISOString() : '',
+            completedAt: newStatus ? new Date().toISOString() : null,
           },
         },
       };
 
+      console.log('Updating progress:', {
+        level: projectLevel,
+        projectId,
+        newStatus,
+        updatedProgress
+      });
+
       await updateUserProgress(updatedProgress);
       setIsCompleted(newStatus);
-
-      // Update localStorage for UI consistency
-      const completedProjects = JSON.parse(localStorage.getItem('completedProjects') || '{}');
-      completedProjects[projectId] = newStatus;
-      localStorage.setItem('completedProjects', JSON.stringify(completedProjects));
 
       toast({
         title: newStatus ? 'Project Completed! 🎉' : 'Project Status Updated',

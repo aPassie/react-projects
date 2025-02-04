@@ -31,10 +31,6 @@ export const ProgressTracker = () => {
     fetchProgress();
   }, [getUserProgress, refreshKey]);
 
-  const handleProgressUpdate = () => {
-    setRefreshKey(prev => prev + 1);
-  };
-
   const calculateProgress = (level: keyof UserProgress) => {
     if (!progress) return 0;
     const levelProjects = progress[level];
@@ -42,6 +38,28 @@ export const ProgressTracker = () => {
       (project) => project.completed
     ).length;
     return (completedProjects / 5) * 100;
+  };
+
+  const getCompletedCount = (level: keyof UserProgress) => {
+    if (!progress) return 0;
+    const levelProjects = progress[level];
+    return Object.values(levelProjects).filter((project) => project.completed).length;
+  };
+
+  const getNextLevelText = (level: keyof UserProgress) => {
+    const completed = getCompletedCount(level);
+    const remaining = 5 - completed;
+    
+    switch(level) {
+      case 'beginner':
+        return `${remaining} more to Intermediate`;
+      case 'intermediate':
+        return `${remaining} more to Advanced`;
+      case 'advanced':
+        return `${remaining} more to Expert`;
+      default:
+        return 'Level Complete!';
+    }
   };
 
   if (!progress) return null;
@@ -55,23 +73,38 @@ export const ProgressTracker = () => {
         <CardContent className="space-y-8">
           {/* Beginner Level */}
           <div className="space-y-2">
-            <h3 className="text-lg font-semibold">Beginner</h3>
+            <div className="flex justify-between items-center mb-2">
+              <h3 className="text-lg font-semibold">Beginner</h3>
+              <span className="text-sm text-muted-foreground">
+                {getCompletedCount('beginner')}/5 completed
+              </span>
+            </div>
             <Progress value={calculateProgress('beginner')} className="h-2" />
-            <ProgressTracker level="beginner" onProgressUpdate={handleProgressUpdate} />
+            <p className="text-sm text-muted-foreground">{getNextLevelText('beginner')}</p>
           </div>
 
           {/* Intermediate Level */}
           <div className="space-y-2">
-            <h3 className="text-lg font-semibold">Intermediate</h3>
+            <div className="flex justify-between items-center mb-2">
+              <h3 className="text-lg font-semibold">Intermediate</h3>
+              <span className="text-sm text-muted-foreground">
+                {getCompletedCount('intermediate')}/5 completed
+              </span>
+            </div>
             <Progress value={calculateProgress('intermediate')} className="h-2" />
-            <ProgressTracker level="intermediate" onProgressUpdate={handleProgressUpdate} />
+            <p className="text-sm text-muted-foreground">{getNextLevelText('intermediate')}</p>
           </div>
 
           {/* Advanced Level */}
           <div className="space-y-2">
-            <h3 className="text-lg font-semibold">Advanced</h3>
+            <div className="flex justify-between items-center mb-2">
+              <h3 className="text-lg font-semibold">Advanced</h3>
+              <span className="text-sm text-muted-foreground">
+                {getCompletedCount('advanced')}/5 completed
+              </span>
+            </div>
             <Progress value={calculateProgress('advanced')} className="h-2" />
-            <ProgressTracker level="advanced" onProgressUpdate={handleProgressUpdate} />
+            <p className="text-sm text-muted-foreground">{getNextLevelText('advanced')}</p>
           </div>
         </CardContent>
       </Card>
