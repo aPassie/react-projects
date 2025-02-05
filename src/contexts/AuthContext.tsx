@@ -9,7 +9,7 @@ import {
   signInWithPopup,
 } from 'firebase/auth';
 import { auth, db } from '@/lib/firebase';
-import { doc, setDoc, getDoc } from 'firebase/firestore';
+import { doc, setDoc, getDoc, updateDoc } from 'firebase/firestore';
 
 interface AuthContextType {
   user: User | null;
@@ -19,7 +19,7 @@ interface AuthContextType {
   signInWithGoogle: () => Promise<void>;
   logout: () => Promise<void>;
   getUserProgress: () => Promise<any>;
-  updateUserProgress: (progress: any) => Promise<void>;
+  updateProjectProgress: (projectId: string, difficulty: string, completed: boolean) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -91,16 +91,26 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     };
   };
 
-  const updateUserProgress = async (progress: any) => {
-    if (!user) return;
-    
+  const updateProjectProgress = async (projectId: string, difficulty: string, completed: boolean) => {
+    if (!user) throw new Error('No user logged in');
+
     const userRef = doc(db, 'users', user.uid);
     const userDoc = await getDoc(userRef);
-    const userData = userDoc.data();
-    
-    await setDoc(userRef, {
-      ...userData,
-      progress
+    const currentProgress = userDoc.data()?.progress || {};
+
+    const updatedProgress = {
+      ...currentProgress,
+      [difficulty.toLowerCase()]: {
+        ...(currentProgress[difficulty.toLowerCase()] || {}),
+        [projectId]: {
+          completed,
+          completedAt: completed ? new Date().toISOString() : null,
+        },
+      },
+    };
+
+    await updateDoc(userRef, {
+      progress: updatedProgress,
     });
   };
 
@@ -112,7 +122,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     signInWithGoogle,
     logout,
     getUserProgress,
-    updateUserProgress
+    updateProjectProgress,
   };
 
   return (

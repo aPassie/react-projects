@@ -4,7 +4,7 @@ import { BarChart, Trophy, BookOpen } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 
 interface ProgressTrackerProps {
-  level: 'beginner' | 'intermediate' | 'advanced';
+  level: 'Beginner' | 'Intermediate' | 'Advanced';
   onProgressUpdate?: () => void;
 }
 
@@ -22,9 +22,9 @@ interface UserProgress {
 }
 
 const levelRequirements = {
-  'beginner': { next: 'intermediate', required: 3 },
-  'intermediate': { next: 'advanced', required: 3 },
-  'advanced': { next: 'Expert', required: 3 },
+  'Beginner': { next: 'Intermediate', required: 3 },
+  'Intermediate': { next: 'Advanced', required: 3 },
+  'Advanced': { next: 'Expert', required: 3 },
   'Expert': { next: null, required: null },
 } as const;
 
@@ -36,10 +36,10 @@ const ProgressTracker = ({ level, onProgressUpdate }: ProgressTrackerProps) => {
   const total = levelRequirements[level].required || 3;
 
   const checkPreviousLevel = async (userProgress: UserProgress) => {
-    if (level === 'beginner') return true;
+    if (level === 'Beginner') return true;
     
-    const previousLevel = level === 'advanced' ? 'intermediate' : 'beginner';
-    const previousCompleted = Object.values(userProgress?.[previousLevel] || {}).filter(
+    const previousLevel = level === 'Advanced' ? 'Intermediate' : 'Beginner';
+    const previousCompleted = Object.values(userProgress?.[previousLevel.toLowerCase()] || {}).filter(
       project => project?.completed === true
     ).length;
     
@@ -49,22 +49,18 @@ const ProgressTracker = ({ level, onProgressUpdate }: ProgressTrackerProps) => {
   const fetchProgress = async () => {
     try {
       const userProgress = await getUserProgress() as UserProgress;
-      console.log('Current progress for level:', level, userProgress?.[level]);
-      
       const isPreviousComplete = await checkPreviousLevel(userProgress);
       setPreviousLevelComplete(isPreviousComplete);
       
-      if (userProgress?.[level]) {
-        const completedProjects = Object.values(userProgress[level]).filter(
+      const currentLevelProgress = userProgress?.[level.toLowerCase()];
+      if (currentLevelProgress) {
+        const completedProjects = Object.values(currentLevelProgress).filter(
           project => project?.completed === true
         );
-        console.log('Completed projects:', completedProjects.length);
-        
         const completedCount = completedProjects.length;
         setCompleted(completedCount);
         setProgress((completedCount / total) * 100);
       } else {
-        console.log('No progress found for level:', level);
         setCompleted(0);
         setProgress(0);
       }
@@ -77,20 +73,12 @@ const ProgressTracker = ({ level, onProgressUpdate }: ProgressTrackerProps) => {
 
   useEffect(() => {
     fetchProgress();
-    const intervalId = setInterval(fetchProgress, 2000);
-    return () => clearInterval(intervalId);
-  }, [level]);
-
-  useEffect(() => {
-    if (onProgressUpdate) {
-      fetchProgress();
-    }
-  }, [onProgressUpdate]);
+  }, [level, onProgressUpdate]);
 
   const nextLevel = levelRequirements[level];
   const remainingForNextLevel = nextLevel?.required ? nextLevel.required - completed : 0;
 
-  if (!previousLevelComplete && level !== 'beginner') {
+  if (!previousLevelComplete && level !== 'Beginner') {
     return (
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <Card className="p-6 col-span-3 bg-yellow-500/10 backdrop-blur border-border/50">

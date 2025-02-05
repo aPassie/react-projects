@@ -5,9 +5,13 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { AuthProvider, useAuth } from "./contexts/AuthContext";
 import Index from "./pages/Index";
-import ProjectDetails from "./pages/ProjectDetails";
+import { ProjectsPage } from "./pages/projects/ProjectsPage";
+import { ProjectDashboard } from "./pages/admin/ProjectDashboard";
+import { AdminSetup } from "./pages/admin/AdminSetup";
 import NotFound from "./pages/NotFound";
 import { AuthForm } from "./components/auth/AuthForm";
+import { AdminRoute } from "./components/AdminRoute";
+import ProjectDetails from "./pages/ProjectDetails";
 
 const queryClient = new QueryClient();
 
@@ -74,13 +78,39 @@ const App = () => (
               }
             />
             <Route
-              path="/project/:projectId"
+              path="/projects"
+              element={
+                <ProtectedRoute>
+                  <ProjectsPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/projects/:projectId"
               element={
                 <ProtectedRoute>
                   <ProjectDetails />
                 </ProtectedRoute>
               }
             />
+            <Route
+              path="/admin/projects"
+              element={
+                <AdminRoute>
+                  <ProjectDashboard />
+                </AdminRoute>
+              }
+            />
+            {import.meta.env.DEV && (
+              <Route
+                path="/admin/setup"
+                element={
+                  <ProtectedRoute>
+                    <AdminSetup />
+                  </ProtectedRoute>
+                }
+              />
+            )}
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
