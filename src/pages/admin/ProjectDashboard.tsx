@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Plus } from 'lucide-react';
+import { Plus, Pencil, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -23,10 +23,11 @@ import { Project, DifficultyLevel } from '@/types/project';
 import { ProjectForm } from './ProjectForm';
 
 export function ProjectDashboard() {
-  const [isOpen, setIsOpen] = useState(false);
+  const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [editingProject, setEditingProject] = useState<Project | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedDifficulty, setSelectedDifficulty] = useState<DifficultyLevel | ''>('');
-  
+
   const queryClient = useQueryClient();
 
   const { data: projects = [], isLoading } = useQuery({
@@ -48,23 +49,28 @@ export function ProjectDashboard() {
     return matchesSearch && matchesDifficulty;
   });
 
+  const handleEditSuccess = () => {
+    setEditingProject(null);
+    queryClient.invalidateQueries({ queryKey: ['projects'] });
+  };
+
   return (
     <div className="container mx-auto py-10">
       <div className="flex justify-between items-center mb-8">
         <h1 className="text-3xl font-bold">Project Management</h1>
-        <Dialog open={isOpen} onOpenChange={setIsOpen}>
+        <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
           <DialogTrigger asChild>
             <Button>
               <Plus className="mr-2 h-4 w-4" />
               Add Project
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-2xl">
+          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>Add New Project</DialogTitle>
             </DialogHeader>
             <ProjectForm onSuccess={() => {
-              setIsOpen(false);
+              setIsCreateOpen(false);
               queryClient.invalidateQueries({ queryKey: ['projects'] });
             }} />
           </DialogContent>
@@ -98,13 +104,13 @@ export function ProjectDashboard() {
               <TableHead>Difficulty</TableHead>
               <TableHead>Tech Stack</TableHead>
               <TableHead>Created</TableHead>
-              <TableHead>Actions</TableHead>
+              <TableHead className="w-[200px]">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {filteredProjects.map((project) => (
               <TableRow key={project.id}>
-                <TableCell>{project.title}</TableCell>
+                <TableCell className="font-medium">{project.title}</TableCell>
                 <TableCell>{project.difficulty}</TableCell>
                 <TableCell>
                   {project.techStack.map(tech => tech.name).join(', ')}
@@ -117,8 +123,9 @@ export function ProjectDashboard() {
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => {/* TODO: Implement edit */}}
+                      onClick={() => setEditingProject(project)}
                     >
+                      <Pencil className="h-4 w-4 mr-2" />
                       Edit
                     </Button>
                     <Button
@@ -130,6 +137,7 @@ export function ProjectDashboard() {
                         }
                       }}
                     >
+                      <Trash2 className="h-4 w-4 mr-2" />
                       Delete
                     </Button>
                   </div>
@@ -139,6 +147,21 @@ export function ProjectDashboard() {
           </TableBody>
         </Table>
       </div>
+
+      {/* Edit Project Dialog */}
+      <Dialog open={!!editingProject} onOpenChange={(open) => !open && setEditingProject(null)}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Edit Project: {editingProject?.title}</DialogTitle>
+          </DialogHeader>
+          {editingProject && (
+            <ProjectForm
+              project={editingProject}
+              onSuccess={handleEditSuccess}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

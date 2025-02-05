@@ -157,82 +157,101 @@ export function ProjectForm({ project, onSuccess }: ProjectFormProps) {
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-        <FormField
-          control={form.control}
-          name="title"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Title</FormLabel>
-              <FormControl>
-                <Input {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
+      <form onSubmit={form.handleSubmit(onSubmit)} className="max-w-4xl mx-auto p-6 space-y-8">
+        {/* Basic Information Section */}
+        <div className="space-y-6">
+          <h2 className="text-2xl font-bold">Basic Information</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <FormField
+              control={form.control}
+              name="title"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Title</FormLabel>
+                  <FormControl>
+                    <Input {...field} className="w-full" placeholder="Enter project title" />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
-        <FormField
-          control={form.control}
-          name="description"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Description</FormLabel>
-              <FormControl>
-                <Textarea {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
+            <FormField
+              control={form.control}
+              name="difficulty"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Difficulty Level</FormLabel>
+                  <Select
+                    onValueChange={field.onChange}
+                    defaultValue={field.value}
+                  >
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select difficulty" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="Beginner">Beginner</SelectItem>
+                      <SelectItem value="Intermediate">Intermediate</SelectItem>
+                      <SelectItem value="Advanced">Advanced</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
 
-        <FormField
-          control={form.control}
-          name="difficulty"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Difficulty Level</FormLabel>
-              <Select
-                onValueChange={field.onChange}
-                defaultValue={field.value}
-              >
+          <FormField
+            control={form.control}
+            name="description"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Description</FormLabel>
                 <FormControl>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select difficulty" />
-                  </SelectTrigger>
+                  <Textarea 
+                    {...field} 
+                    className="min-h-[100px]"
+                    placeholder="Enter project description" 
+                  />
                 </FormControl>
-                <SelectContent>
-                  <SelectItem value="Beginner">Beginner</SelectItem>
-                  <SelectItem value="Intermediate">Intermediate</SelectItem>
-                  <SelectItem value="Advanced">Advanced</SelectItem>
-                </SelectContent>
-              </Select>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
 
-        <div>
-          <label className="text-sm font-medium">Tech Stack</label>
-          <div className="flex gap-2 mt-2">
+        {/* Tech Stack Section */}
+        <div className="space-y-4">
+          <h2 className="text-2xl font-bold">Tech Stack</h2>
+          <div className="flex gap-2">
             <Input
               value={newTech}
               onChange={(e) => setNewTech(e.target.value)}
               placeholder="Add technology..."
+              className="max-w-sm"
             />
-            <Button type="button" onClick={addTechStack}>Add</Button>
+            <Button 
+              type="button" 
+              onClick={addTechStack}
+              variant="secondary"
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Add
+            </Button>
           </div>
           <div className="flex flex-wrap gap-2 mt-2">
             {techStack.map((tech) => (
               <div
                 key={tech.id}
-                className="flex items-center gap-2 bg-secondary p-2 rounded-md"
+                className="flex items-center gap-2 bg-secondary/50 px-3 py-1.5 rounded-full"
               >
                 <span>{tech.name}</span>
                 <button
                   type="button"
                   onClick={() => removeTechStack(tech.id)}
-                  className="text-destructive"
+                  className="text-destructive hover:text-destructive/80 transition-colors"
                 >
                   <X className="h-4 w-4" />
                 </button>
@@ -241,88 +260,113 @@ export function ProjectForm({ project, onSuccess }: ProjectFormProps) {
           </div>
         </div>
 
-        <div>
-          <label className="text-sm font-medium">Project Steps</label>
-          <div className="space-y-4 mt-2">
+        {/* Project Steps Section */}
+        <div className="space-y-4">
+          <h2 className="text-2xl font-bold">Project Steps</h2>
+          <div className="space-y-4">
             {steps.map((step, index) => (
-              <div key={index} className="border p-4 rounded-md">
-                <div className="flex justify-between items-center mb-2">
-                  <h4 className="font-medium">Step {index + 1}</h4>
+              <div key={index} className="border rounded-lg p-6 space-y-4 bg-card">
+                <div className="flex justify-between items-center">
+                  <h4 className="text-lg font-semibold">Step {index + 1}</h4>
                   <Button
                     type="button"
                     variant="destructive"
                     size="sm"
                     onClick={() => removeStep(index)}
                   >
+                    <X className="h-4 w-4 mr-2" />
                     Remove
                   </Button>
                 </div>
                 <div className="space-y-4">
-                  <Input
-                    value={step.title}
-                    onChange={(e) => updateStep(index, 'title', e.target.value)}
-                    placeholder="Step title"
-                  />
-                  <Textarea
-                    value={step.description}
-                    onChange={(e) => updateStep(index, 'description', e.target.value)}
-                    placeholder="Step description"
-                  />
-                  <Textarea
-                    value={step.codeTemplate || ''}
-                    onChange={(e) => updateStep(index, 'codeTemplate', e.target.value)}
-                    placeholder="Code template (optional)"
-                  />
+                  <div>
+                    <label className="text-sm font-medium">Title</label>
+                    <Input
+                      value={step.title}
+                      onChange={(e) => updateStep(index, 'title', e.target.value)}
+                      placeholder="Enter step title"
+                      className="mt-1.5"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium">Description</label>
+                    <Textarea
+                      value={step.description}
+                      onChange={(e) => updateStep(index, 'description', e.target.value)}
+                      placeholder="Enter step description"
+                      className="mt-1.5 min-h-[100px]"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium">Code Template (Optional)</label>
+                    <Textarea
+                      value={step.codeTemplate || ''}
+                      onChange={(e) => updateStep(index, 'codeTemplate', e.target.value)}
+                      placeholder="Enter code template"
+                      className="mt-1.5 min-h-[150px] font-mono"
+                    />
+                  </div>
                 </div>
               </div>
             ))}
-            <Button type="button" onClick={addStep} className="w-full">
+            <Button 
+              type="button" 
+              onClick={addStep} 
+              variant="outline" 
+              className="w-full"
+            >
               <Plus className="mr-2 h-4 w-4" />
               Add Step
             </Button>
           </div>
         </div>
 
-        <div>
-          <label className="text-sm font-medium">Resources</label>
-          <div className="mt-2">
-            <Input
-              type="file"
-              onChange={(e) => {
-                const file = e.target.files?.[0];
-                if (file) handleFileUpload(file);
-              }}
-            />
-          </div>
-          <div className="flex flex-wrap gap-2 mt-2">
-            {resources.map((resource) => (
-              <div
-                key={resource.id}
-                className="flex items-center gap-2 bg-secondary p-2 rounded-md"
-              >
-                <a
-                  href={resource.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-primary hover:underline"
+        {/* Resources Section */}
+        <div className="space-y-4">
+          <h2 className="text-2xl font-bold">Resources</h2>
+          <div className="space-y-4">
+            <div className="flex items-center gap-4">
+              <Input
+                type="file"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) handleFileUpload(file);
+                }}
+                className="flex-1"
+              />
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {resources.map((resource) => (
+                <div
+                  key={resource.id}
+                  className="flex items-center gap-2 bg-secondary/50 px-3 py-1.5 rounded-full"
                 >
-                  {resource.title}
-                </a>
-                <button
-                  type="button"
-                  onClick={() => setResources(resources.filter(r => r.id !== resource.id))}
-                  className="text-destructive"
-                >
-                  <X className="h-4 w-4" />
-                </button>
-              </div>
-            ))}
+                  <a
+                    href={resource.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-primary hover:underline"
+                  >
+                    {resource.title}
+                  </a>
+                  <button
+                    type="button"
+                    onClick={() => setResources(resources.filter(r => r.id !== resource.id))}
+                    className="text-destructive hover:text-destructive/80 transition-colors"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
 
-        <Button type="submit" className="w-full">
-          {project ? 'Update Project' : 'Create Project'}
-        </Button>
+        <div className="pt-6">
+          <Button type="submit" className="w-full">
+            {project ? 'Update Project' : 'Create Project'}
+          </Button>
+        </div>
       </form>
     </Form>
   );

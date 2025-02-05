@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { ThemeToggle } from './ThemeToggle';
 import { LogOut, Search } from 'lucide-react';
 import { Input } from './ui/input';
@@ -32,9 +33,11 @@ const Navbar = ({ onSearch }: NavbarProps) => {
                 <div className="flex items-center justify-between h-full gap-4">
                     {/* Left - Brand */}
                     <div className="flex-shrink-0">
-                        <h1 className="text-xl font-bold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
-                            React Projects
-                        </h1>
+                        <Link to="/" className="hover:opacity-80 transition-opacity">
+                            <h1 className="text-xl font-bold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
+                                React Projects
+                            </h1>
+                        </Link>
                     </div>
 
                     {/* Center - Search */}
