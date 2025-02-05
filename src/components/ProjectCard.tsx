@@ -49,7 +49,7 @@ const ProjectCard: React.FC<ProjectCardProps> = ({
   }, [id, difficulty]);
 
   return (
-    <Link to={`/project/${id}`} className="block">
+    <Link to={`/projects/${id}`} className="block">
       <Card className={`p-6 h-full hover:scale-[1.02] transition-transform ${
         isCompleted ? 'bg-green-50 dark:bg-green-900/10 border-green-200 dark:border-green-900' : ''
       }`}>

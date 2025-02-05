@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import { useNavigate } from 'react-router-dom';
 import { Search } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import {
@@ -13,12 +14,11 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { getProjects } from '@/lib/firebase/projects';
 import type { DifficultyLevel } from '@/types/project';
-import { ProjectDetails } from './ProjectDetails';
 
 export function ProjectsPage() {
+  const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedDifficulty, setSelectedDifficulty] = useState<DifficultyLevel | ''>('');
-  const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
 
   const { data: projects = [], isLoading } = useQuery({
     queryKey: ['projects'],
@@ -31,6 +31,10 @@ export function ProjectsPage() {
     const matchesDifficulty = !selectedDifficulty || project.difficulty === selectedDifficulty;
     return matchesSearch && matchesDifficulty;
   });
+
+  const handleProjectClick = (projectId: string) => {
+    navigate(`/projects/${projectId}`);
+  };
 
   return (
     <div className="container mx-auto py-10">
@@ -67,7 +71,7 @@ export function ProjectsPage() {
           <Card
             key={project.id}
             className="cursor-pointer hover:shadow-lg transition-shadow"
-            onClick={() => setSelectedProjectId(project.id)}
+            onClick={() => handleProjectClick(project.id)}
           >
             <CardHeader>
               <div className="flex justify-between items-start">
@@ -96,13 +100,6 @@ export function ProjectsPage() {
           </Card>
         ))}
       </div>
-
-      {selectedProjectId && (
-        <ProjectDetails
-          projectId={selectedProjectId}
-          onClose={() => setSelectedProjectId(null)}
-        />
-      )}
     </div>
   );
 }
