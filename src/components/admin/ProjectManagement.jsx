@@ -25,24 +25,23 @@ export function ProjectManagement() {
   ];
 
   return (
-    <div className="p-6">
+    <div className="p-0"> {/* Reduced padding */}
       {/* Navigation Pills */}
-      <div className="flex flex-wrap gap-3 mb-8 border-b border-neutral-700 pb-4">
+      <div className="flex flex-wrap gap-3 mb-6 border-b border-slate-200 pb-4">
         {[
-          { id: 'list', label: '📋 Project List' },
-          { id: 'form', label: '✏️ Add/Edit Project' },
-          { id: 'templates', label: '📑 Templates' },
-          { id: 'import-export', label: '💾 Import/Export' },
-          { id: 'stats', label: '📊 Statistics' }
+          { id: 'list', label: 'Project List' },
+          { id: 'form', label: 'Add/Edit Project' },
+          { id: 'templates', label: 'Templates' },
+          { id: 'import-export', label: 'Import/Export' },
+          { id: 'stats', label: 'Statistics' }
         ].map(view => (
           <button
             key={view.id}
             onClick={() => setActiveView(view.id)}
-            className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${
-              activeView === view.id
-                ? 'bg-blue-600 text-white'
-                : 'bg-neutral-700/50 text-neutral-400 hover:bg-neutral-700 hover:text-white'
-            }`}
+            className={`px-6 py-3 rounded-full  transition-colors duration-200 font-medium ${activeView === view.id
+                ? 'bg-blue-500 text-white shadow-sm'
+                : 'bg-slate-200 hover:bg-slate-300 text-slate-700'
+              }`}
           >
             {view.label}
           </button>
@@ -50,7 +49,7 @@ export function ProjectManagement() {
       </div>
 
       {/* Content Area */}
-      <div className="bg-neutral-900 rounded-lg">
+      <div className="bg-white rounded-lg shadow-sm ">
         {activeView === 'list' && (
           <ProjectList
             onNewProject={() => {
@@ -97,4 +96,4 @@ export function ProjectManagement() {
       </div>
     </div>
   );
-} 
+}

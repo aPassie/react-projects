@@ -83,25 +83,25 @@ export function ProjectImportExport() {
 
   return (
     <div className="space-y-6">
-      <h2 className="text-xl font-bold">Import/Export Projects</h2>
+      <h2 className="text-2xl font-semibold text-slate-800">Import/Export Projects</h2>
 
       {error && (
-        <div className="bg-red-500/10 border border-red-500/50 text-red-500 p-4 rounded-lg">
+        <div className="bg-red-100 border border-red-400 text-red-700 p-4 rounded-lg">
           {error}
         </div>
       )}
 
       {success && (
-        <div className="bg-green-500/10 border border-green-500/50 text-green-500 p-4 rounded-lg">
+        <div className="bg-green-100 border border-green-400 text-green-700 p-4 rounded-lg">
           {success}
         </div>
       )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* Import Section */}
-        <div className="bg-neutral-800 p-6 rounded-lg">
-          <h3 className="text-lg font-medium mb-4">Import Projects</h3>
-          <p className="text-neutral-400 mb-4">
+        <div className="bg-white p-6 rounded-lg border border-slate-200 shadow-sm">
+          <h3 className="text-lg font-medium text-slate-800 mb-4">Import Projects</h3>
+          <p className="text-slate-600 mb-4">
             Import projects from a JSON file. The file should contain an array of project objects.
           </p>
           <input
@@ -109,27 +109,28 @@ export function ProjectImportExport() {
             accept=".json"
             onChange={handleImport}
             disabled={importing}
-            className="block w-full text-sm text-neutral-400
+            className="block w-full text-sm text-slate-500
               file:mr-4 file:py-2 file:px-4
-              file:rounded-lg file:border-0
+              file:rounded-full file:border-0
               file:text-sm file:font-medium
-              file:bg-blue-600 file:text-white
-              hover:file:bg-blue-700
+              file:bg-blue-500 file:text-white
+              hover:file:bg-blue-600
               file:cursor-pointer file:transition-colors
+              file:active:scale-95
               disabled:opacity-50"
           />
         </div>
 
         {/* Export Section */}
-        <div className="bg-neutral-800 p-6 rounded-lg">
-          <h3 className="text-lg font-medium mb-4">Export Projects</h3>
-          <p className="text-neutral-400 mb-4">
+        <div className="bg-white p-6 rounded-lg border border-slate-200 shadow-sm">
+          <h3 className="text-lg font-medium text-slate-800 mb-4">Export Projects</h3>
+          <p className="text-slate-600 mb-4">
             Export all projects to a JSON file. This includes all project data and settings.
           </p>
           <button
             onClick={handleExport}
             disabled={exporting}
-            className="w-full px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors disabled:opacity-50"
+            className="w-full px-5 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-full transition-colors duration-200 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {exporting ? 'Exporting...' : 'Export Projects'}
           </button>

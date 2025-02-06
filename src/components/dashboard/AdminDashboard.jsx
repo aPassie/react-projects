@@ -1,3 +1,4 @@
+//AdminDashboard.js
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
@@ -62,11 +63,11 @@ export function AdminDashboard() {
   };
 
   useEffect(() => {
-    if (activeTab === 'projects') {
+
       fetchProjects();
-    } else {
-      fetchStudents();
-    }
+      fetchStudents()
+      setLoading(false);
+
   }, [activeTab]);
 
   const handleDelete = async (projectId) => {
@@ -86,77 +87,99 @@ export function AdminDashboard() {
     fetchProjects();
   };
 
-  if (loading) {
-    return <div className="text-center py-8">Loading...</div>;
+ if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-slate-100">
+        <div className="relative">
+          <div className="animate-spin rounded-full h-12 w-12 border-t-4 border-b-4 border-slate-500"></div>
+          <div className="absolute inset-0 flex items-center justify-center">
+            <div className="h-4 w-4 rounded-full bg-slate-500"></div>
+          </div>
+        </div>
+      </div>
+    );
   }
 
   return (
-    <div className="min-h-screen bg-neutral-900 flex">
-      {/* Sidebar Navigation */}
-      <div className="w-64 bg-neutral-800 border-r border-neutral-700 fixed h-full">
-        <div className="p-4 border-b border-neutral-700">
-          <h1 className="text-xl font-bold">Admin Panel</h1>
-          <p className="text-sm text-neutral-400 mt-1">
-            {currentUser?.displayName || currentUser?.email}
-          </p>
-        </div>
-        
-        <nav className="p-4">
-          {[
-            { id: 'analytics', label: 'Analytics', icon: '📊' },
-            { id: 'projects', label: 'Projects', icon: '📂' },
-            { id: 'students', label: 'Students', icon: '👥' },
-            { id: 'settings', label: 'Settings', icon: '⚙️' }
-          ].map(tab => (
+    <div className="min-h-screen bg-slate-100 text-slate-800">
+      <header className="bg-white py-4 px-6 border-b border-slate-200 shadow-sm">
+        <div className="flex flex-col md:flex-row justify-between items-center">
+          <div className="animate-fade-in">
+            <h1 className="text-2xl font-semibold">
+              Welcome, {currentUser?.displayName || currentUser?.email}!
+            </h1>
+            <p className="text-slate-600">Admin Dashboard</p>
+          </div>
+          <div className="flex space-x-4 mt-4 md:mt-0">
             <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
-              className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg mb-2 transition-all ${
-                activeTab === tab.id
-                  ? 'bg-blue-600 text-white'
-                  : 'text-neutral-400 hover:bg-neutral-700 hover:text-white'
+              onClick={handleLogout}
+              className="px-5 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-full transition-all duration-200 hover:scale-105 active:scale-95 shadow-sm hover:shadow"
+            >
+              Log Out
+            </button>
+          </div>
+        </div>
+      </header>
+
+      <main className="py-8 px-6">
+        <div className="animate-fade-in-up">
+          <div className="mb-8 flex flex-wrap gap-4 justify-center">
+            <button
+              onClick={() => setActiveTab('analytics')}
+              className={`px-6 py-3 rounded-full transition-all duration-200 hover:scale-105 active:scale-95 ${
+                activeTab === 'analytics'
+                  ? 'bg-blue-500 text-white shadow-md'
+                  : 'bg-white hover:bg-slate-50 text-slate-700 shadow-sm hover:shadow'
               }`}
             >
-              <span>{tab.icon}</span>
-              <span>{tab.label}</span>
+              Analytics
             </button>
-          ))}
-        </nav>
-
-        <div className="absolute bottom-0 w-full p-4 border-t border-neutral-700">
-          <button
-            onClick={handleLogout}
-            className="w-full px-4 py-2 text-neutral-400 hover:text-white hover:bg-neutral-700 rounded-lg transition-all"
-          >
-            Sign Out
-          </button>
-        </div>
-      </div>
-
-      {/* Main Content */}
-      <div className="ml-64 flex-1">
-        {/* Header */}
-        <div className="bg-neutral-800 border-b border-neutral-700 p-6">
-          <h2 className="text-2xl font-bold">
-            {activeTab.charAt(0).toUpperCase() + activeTab.slice(1)}
-          </h2>
-        </div>
-
-        {/* Error Display */}
-        {error && (
-          <div className="m-6 bg-red-500/10 border border-red-500/50 text-red-500 p-4 rounded-lg">
-            {error}
+            <button
+              onClick={() => setActiveTab('projects')}
+              className={`px-6 py-3 rounded-full transition-all duration-200 hover:scale-105 active:scale-95 ${
+                activeTab === 'projects'
+                  ? 'bg-blue-500 text-white shadow-md'
+                  : 'bg-white hover:bg-slate-50 text-slate-700 shadow-sm hover:shadow'
+              }`}
+            >
+              Projects
+            </button>
+            <button
+              onClick={() => setActiveTab('students')}
+              className={`px-6 py-3 rounded-full transition-all duration-200 hover:scale-105 active:scale-95 ${
+                activeTab === 'students'
+                  ? 'bg-blue-500 text-white shadow-md'
+                  : 'bg-white hover:bg-slate-50 text-slate-700 shadow-sm hover:shadow'
+              }`}
+            >
+              Students
+            </button>
+            <button
+              onClick={() => setActiveTab('settings')}
+              className={`px-6 py-3 rounded-full transition-all duration-200 hover:scale-105 active:scale-95 ${
+                activeTab === 'settings'
+                  ? 'bg-blue-500 text-white shadow-md'
+                  : 'bg-white hover:bg-slate-50 text-slate-700 shadow-sm hover:shadow'
+              }`}
+            >
+              Settings
+            </button>
           </div>
-        )}
 
-        {/* Content Area */}
-        <div className="p-6">
-          {activeTab === 'analytics' && <DashboardAnalytics />}
-          {activeTab === 'projects' && <ProjectManagement />}
-          {activeTab === 'students' && <StudentManagement />}
-          {activeTab === 'settings' && <SettingsManagement />}
+          {error && (
+            <div className="mb-8 bg-red-100 border border-red-400 text-red-700 p-4 rounded-lg animate-fade-in">
+              {error}
+            </div>
+          )}
+
+          <div className="bg-white rounded-lg shadow-sm p-6 animate-fade-in-up">
+            {activeTab === 'analytics' && <DashboardAnalytics />}
+            {activeTab === 'projects' && <ProjectManagement />}
+            {activeTab === 'students' && <StudentManagement />}
+            {activeTab === 'settings' && <SettingsManagement />}
+          </div>
         </div>
-      </div>
+      </main>
     </div>
   );
-} 
+}

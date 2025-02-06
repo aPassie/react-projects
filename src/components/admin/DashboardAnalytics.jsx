@@ -110,12 +110,16 @@ export function DashboardAnalytics() {
   };
 
   if (loading) {
-    return <div className="text-center py-8">Loading analytics...</div>;
+    return (
+      <div className="flex items-center justify-center py-8 animate-pulse">
+        <div className="text-slate-600">Loading analytics...</div>
+      </div>
+    );
   }
 
   if (error) {
     return (
-      <div className="bg-red-500/10 border border-red-500/50 text-red-500 p-4 rounded-lg">
+      <div className="bg-red-100 border border-red-400 text-red-700 p-4 rounded-lg animate-fade-in">
         {error}
       </div>
     );
@@ -125,33 +129,36 @@ export function DashboardAnalytics() {
     <div className="grid gap-6">
       {/* Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="bg-neutral-800 p-6 rounded-lg">
-          <h3 className="text-lg font-medium text-neutral-400">Total Students</h3>
-          <p className="text-3xl font-bold mt-2">{analytics.totalStudents}</p>
+        <div className="bg-white p-6 rounded-lg border border-slate-200 shadow-sm hover:shadow-md transition-all duration-200 hover:-translate-y-1">
+          <h3 className="text-lg font-medium text-slate-600">Total Students</h3>
+          <p className="text-3xl font-bold mt-2 text-slate-800">{analytics.totalStudents}</p>
         </div>
-        <div className="bg-neutral-800 p-6 rounded-lg">
-          <h3 className="text-lg font-medium text-neutral-400">Total Projects</h3>
-          <p className="text-3xl font-bold mt-2">{analytics.totalProjects}</p>
+        <div className="bg-white p-6 rounded-lg border border-slate-200 shadow-sm hover:shadow-md transition-all duration-200 hover:-translate-y-1">
+          <h3 className="text-lg font-medium text-slate-600">Total Projects</h3>
+          <p className="text-3xl font-bold mt-2 text-slate-800">{analytics.totalProjects}</p>
         </div>
-        <div className="bg-neutral-800 p-6 rounded-lg">
-          <h3 className="text-lg font-medium text-neutral-400">Completion Rate</h3>
-          <p className="text-3xl font-bold mt-2">{analytics.completionRate}%</p>
+        <div className="bg-white p-6 rounded-lg border border-slate-200 shadow-sm hover:shadow-md transition-all duration-200 hover:-translate-y-1">
+          <h3 className="text-lg font-medium text-slate-600">Completion Rate</h3>
+          <p className="text-3xl font-bold mt-2 text-slate-800">{analytics.completionRate}%</p>
         </div>
       </div>
 
       {/* Popular Projects */}
-      <div className="bg-neutral-800 p-6 rounded-lg">
-        <h3 className="text-xl font-bold mb-4">Most Popular Projects</h3>
+      <div className="bg-white p-6 rounded-lg border border-slate-200 shadow-sm hover:shadow-md transition-all duration-200">
+        <h3 className="text-xl font-semibold text-slate-800 mb-4">Most Popular Projects</h3>
         <div className="space-y-4">
           {analytics.popularProjects.map(project => (
-            <div key={project.id} className="flex justify-between items-center">
+            <div 
+              key={project.id} 
+              className="flex justify-between items-center p-4 rounded-lg bg-slate-50 hover:bg-slate-100 transition-colors duration-200"
+            >
               <div>
-                <h4 className="font-medium">{project.title}</h4>
-                <p className="text-sm text-neutral-400">{project.difficulty}</p>
+                <h4 className="font-medium text-slate-800">{project.title}</h4>
+                <p className="text-sm text-slate-600">{project.difficulty}</p>
               </div>
               <div className="flex items-center gap-2">
-                <span className="text-lg font-bold">{project.completions}</span>
-                <span className="text-sm text-neutral-400">completions</span>
+                <span className="text-lg font-bold text-slate-800">{project.completions}</span>
+                <span className="text-sm text-slate-600">completions</span>
               </div>
             </div>
           ))}
@@ -159,8 +166,8 @@ export function DashboardAnalytics() {
       </div>
 
       {/* Student Activity Graph */}
-      <div className="bg-neutral-800 p-6 rounded-lg">
-        <h3 className="text-xl font-bold mb-4">Student Activity</h3>
+      <div className="bg-white p-6 rounded-lg border border-slate-200 shadow-sm hover:shadow-md transition-all duration-200">
+        <h3 className="text-xl font-semibold text-slate-800 mb-4">Student Activity</h3>
         <div className="h-64">
           <Line
             data={{
@@ -169,7 +176,9 @@ export function DashboardAnalytics() {
                 label: 'New Students',
                 data: Object.values(analytics.studentActivity),
                 borderColor: 'rgb(59, 130, 246)',
-                tension: 0.4
+                backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                tension: 0.4,
+                fill: true
               }]
             }}
             options={{
@@ -179,37 +188,20 @@ export function DashboardAnalytics() {
                 y: {
                   beginAtZero: true,
                   grid: {
-                    color: 'rgba(255, 255, 255, 0.1)',
-                    borderColor: 'rgba(255, 255, 255, 0.1)'
+                    color: 'rgba(148, 163, 184, 0.1)',
                   },
-                  ticks: { 
-                    color: '#9CA3AF',
-                    font: {
-                      size: 12
-                    }
-                  }
+                  ticks: { color: '#64748b' }
                 },
                 x: {
                   grid: {
-                    color: 'rgba(255, 255, 255, 0.1)',
-                    borderColor: 'rgba(255, 255, 255, 0.1)'
+                    color: 'rgba(148, 163, 184, 0.1)',
                   },
-                  ticks: { 
-                    color: '#9CA3AF',
-                    font: {
-                      size: 12
-                    }
-                  }
+                  ticks: { color: '#64748b' }
                 }
               },
               plugins: {
                 legend: {
-                  labels: { 
-                    color: '#9CA3AF',
-                    font: {
-                      size: 12
-                    }
-                  }
+                  labels: { color: '#64748b' }
                 }
               }
             }}
@@ -218,30 +210,21 @@ export function DashboardAnalytics() {
       </div>
 
       {/* Project Difficulty Distribution */}
-      <div className="bg-neutral-800 p-6 rounded-lg">
-        <h3 className="text-xl font-bold mb-4">Project Difficulty Distribution</h3>
+      <div className="bg-white p-6 rounded-lg border border-slate-200 shadow-sm hover:shadow-md transition-all duration-200">
+        <h3 className="text-xl font-semibold text-slate-800 mb-4">Project Difficulty Distribution</h3>
         <div className="h-64">
           <Bar
             data={{
-              labels: ['Beginner', 'Intermediate', 'Advanced'],
+              labels: Object.keys(analytics.projectDifficulty),
               datasets: [{
-                label: 'Number of Projects',
-                data: [
-                  analytics.projectDifficulty.beginner || 0,
-                  analytics.projectDifficulty.intermediate || 0,
-                  analytics.projectDifficulty.advanced || 0
-                ],
+                label: 'Projects',
+                data: Object.values(analytics.projectDifficulty),
                 backgroundColor: [
-                  'rgba(34, 197, 94, 0.5)',
-                  'rgba(59, 130, 246, 0.5)',
-                  'rgba(239, 68, 68, 0.5)'
+                  'rgba(34, 197, 94, 0.8)',  // green for beginner
+                  'rgba(59, 130, 246, 0.8)', // blue for intermediate
+                  'rgba(249, 115, 22, 0.8)'  // orange for advanced
                 ],
-                borderColor: [
-                  'rgb(34, 197, 94)',
-                  'rgb(59, 130, 246)',
-                  'rgb(239, 68, 68)'
-                ],
-                borderWidth: 1
+                borderRadius: 8
               }]
             }}
             options={{
@@ -251,37 +234,20 @@ export function DashboardAnalytics() {
                 y: {
                   beginAtZero: true,
                   grid: {
-                    color: 'rgba(255, 255, 255, 0.1)',
-                    borderColor: 'rgba(255, 255, 255, 0.1)'
+                    color: 'rgba(148, 163, 184, 0.1)',
                   },
-                  ticks: { 
-                    color: '#9CA3AF',
-                    font: {
-                      size: 12
-                    }
-                  }
+                  ticks: { color: '#64748b' }
                 },
                 x: {
                   grid: {
-                    color: 'rgba(255, 255, 255, 0.1)',
-                    borderColor: 'rgba(255, 255, 255, 0.1)'
+                    display: false
                   },
-                  ticks: { 
-                    color: '#9CA3AF',
-                    font: {
-                      size: 12
-                    }
-                  }
+                  ticks: { color: '#64748b' }
                 }
               },
               plugins: {
                 legend: {
-                  labels: { 
-                    color: '#9CA3AF',
-                    font: {
-                      size: 12
-                    }
-                  }
+                  labels: { color: '#64748b' }
                 }
               }
             }}
@@ -290,4 +256,4 @@ export function DashboardAnalytics() {
       </div>
     </div>
   );
-} 
+}

@@ -45,12 +45,12 @@ export function ProjectTemplates({ onUseTemplate }) {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h2 className="text-xl font-bold">Project Templates</h2>
+      <div className="flex justify-between items-center mb-6">
+        <h2 className="text-2xl font-semibold text-slate-800">Project Templates</h2>
       </div>
 
       {error && (
-        <div className="bg-red-500/10 border border-red-500/50 text-red-500 p-4 rounded-lg">
+        <div className="bg-red-100 border border-red-400 text-red-700 p-4 rounded-lg">
           {error}
         </div>
       )}
@@ -59,18 +59,18 @@ export function ProjectTemplates({ onUseTemplate }) {
         {templates.map(template => (
           <div
             key={template.id}
-            className="bg-neutral-800 p-6 rounded-lg space-y-4"
+            className="bg-white p-6 rounded-lg border border-slate-200 shadow-sm hover:shadow-md transition-all duration-200 space-y-4"
           >
             <div>
-              <h3 className="text-lg font-medium">{template.title}</h3>
-              <p className="text-neutral-400 text-sm mt-1">{template.description}</p>
+              <h3 className="text-lg font-medium text-slate-800">{template.title}</h3>
+              <p className="text-slate-600 text-sm mt-1">{template.description}</p>
             </div>
 
             <div className="flex flex-wrap gap-2">
               {template.tags?.map(tag => (
                 <span
                   key={tag}
-                  className="px-2 py-1 bg-neutral-700 rounded-full text-sm"
+                  className="px-3 py-1 bg-slate-100 text-slate-700 rounded-full text-sm font-medium"
                 >
                   {tag}
                 </span>
@@ -78,23 +78,29 @@ export function ProjectTemplates({ onUseTemplate }) {
             </div>
 
             <div className="flex items-center justify-between pt-4">
-              <span className={`px-2 py-1 rounded text-sm ${
-                template.difficulty === 'beginner' ? 'bg-green-500/10 text-green-500' :
-                template.difficulty === 'intermediate' ? 'bg-blue-500/10 text-blue-500' :
-                'bg-red-500/10 text-red-500'
+              <span className={`px-3 py-1 rounded-full text-sm font-medium ${
+                template.difficulty === 'beginner' ? 'bg-green-100 text-green-800' :
+                template.difficulty === 'intermediate' ? 'bg-yellow-100 text-yellow-800' :
+                'bg-red-100 text-red-800'
               }`}>
                 {template.difficulty.charAt(0).toUpperCase() + template.difficulty.slice(1)}
               </span>
               <button
                 onClick={() => onUseTemplate(template)}
-                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors"
+                className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-full transition-colors duration-200 active:scale-95"
               >
                 Use Template
               </button>
             </div>
           </div>
         ))}
+
+        {templates.length === 0 && (
+          <div className="col-span-3 text-center py-8 text-slate-500">
+            No templates available.
+          </div>
+        )}
       </div>
     </div>
   );
-} 
+}

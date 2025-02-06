@@ -3,19 +3,6 @@ import { db, collection, doc, getDoc, setDoc } from '../../config/firebase';
 
 export function SettingsManagement() {
   const [settings, setSettings] = useState({
-    theme: {
-      primaryColor: '#3B82F6',
-      secondaryColor: '#1F2937',
-      accentColor: '#10B981',
-      darkMode: true
-    },
-    platform: {
-      siteName: 'Project Library',
-      description: '',
-      allowRegistration: true,
-      requireEmailVerification: false,
-      maxProjectsPerUser: 10
-    },
     projectTags: [],
     difficultyLevels: [],
     achievementBadges: []
@@ -23,7 +10,7 @@ export function SettingsManagement() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
-  const [activeTab, setActiveTab] = useState('theme');
+  const [activeTab, setActiveTab] = useState('tags');
 
   useEffect(() => {
     fetchSettings();
@@ -33,7 +20,12 @@ export function SettingsManagement() {
     try {
       const settingsDoc = await getDoc(doc(db, 'settings', 'global'));
       if (settingsDoc.exists()) {
-        setSettings(settingsDoc.data());
+        const data = settingsDoc.data();
+        setSettings({
+          projectTags: data.projectTags || [],
+          difficultyLevels: data.difficultyLevels || [],
+          achievementBadges: data.achievementBadges || []
+        });
       }
     } catch (err) {
       setError('Failed to fetch settings: ' + err.message);
@@ -87,39 +79,41 @@ export function SettingsManagement() {
   };
 
   if (loading) {
-    return <div className="text-center py-8">Loading settings...</div>;
+    return (
+      <div className="flex items-center justify-center py-8 animate-pulse">
+        <div className="text-slate-600">Loading settings...</div>
+      </div>
+    );
   }
 
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex justify-between items-center bg-neutral-800 p-4">
-        <h2 className="text-xl font-bold">Platform Settings</h2>
+      <div className="flex justify-between items-center bg-white p-6 rounded-lg border border-slate-200 shadow-sm">
+        <h2 className="text-xl font-semibold text-slate-800">Settings Management</h2>
         <button
           onClick={saveSettings}
-          className="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors"
+          className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-all duration-200 hover:scale-105 active:scale-95"
         >
           Save Changes
         </button>
       </div>
 
       {error && (
-        <div className="bg-red-500/10 border border-red-500/50 text-red-500 p-4 rounded-lg">
+        <div className="bg-red-50 border border-red-200 text-red-600 p-4 rounded-lg">
           {error}
         </div>
       )}
 
       {success && (
-        <div className="bg-green-500/10 border border-green-500/50 text-green-500 p-4 rounded-lg">
+        <div className="bg-green-50 border border-green-200 text-green-600 p-4 rounded-lg">
           {success}
         </div>
       )}
 
       {/* Navigation Tabs */}
-      <div className="border-b border-neutral-700">
+      <div className="border-b border-slate-200">
         {[
-          { id: 'theme', label: 'Theme' },
-          { id: 'platform', label: 'Platform' },
           { id: 'tags', label: 'Tags' },
           { id: 'difficulty', label: 'Difficulty' },
           { id: 'badges', label: 'Badges' }
@@ -127,10 +121,10 @@ export function SettingsManagement() {
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id)}
-            className={`px-6 py-3 -mb-px transition-all ${
+            className={`px-6 py-3 -mb-px transition-all duration-200 ${
               activeTab === tab.id
-                ? 'border-b-2 border-blue-500 text-blue-500'
-                : 'text-neutral-400 hover:text-white'
+                ? 'border-b-2 border-blue-500 text-blue-600 font-medium'
+                : 'text-slate-600 hover:text-slate-900'
             }`}
           >
             {tab.label}
@@ -139,346 +133,219 @@ export function SettingsManagement() {
       </div>
 
       {/* Settings Content */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2 space-y-4 bg-neutral-800 p-6 rounded-lg">
-          {activeTab === 'theme' && (
-            <>
-              <div>
-                <label className="block text-sm font-medium text-neutral-300">
-                  Primary Color
-                </label>
-                <input
-                  type="color"
-                  value={settings.theme.primaryColor}
-                  onChange={(e) => setSettings(prev => ({
-                    ...prev,
-                    theme: { ...prev.theme, primaryColor: e.target.value }
-                  }))}
-                  className="mt-1 block w-full h-10 rounded-lg"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-neutral-300">
-                  Secondary Color
-                </label>
-                <input
-                  type="color"
-                  value={settings.theme.secondaryColor}
-                  onChange={(e) => setSettings(prev => ({
-                    ...prev,
-                    theme: { ...prev.theme, secondaryColor: e.target.value }
-                  }))}
-                  className="mt-1 block w-full h-10 rounded-lg"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-neutral-300">
-                  Accent Color
-                </label>
-                <input
-                  type="color"
-                  value={settings.theme.accentColor}
-                  onChange={(e) => setSettings(prev => ({
-                    ...prev,
-                    theme: { ...prev.theme, accentColor: e.target.value }
-                  }))}
-                  className="mt-1 block w-full h-10 rounded-lg"
-                />
-              </div>
-              <div className="flex items-center">
-                <input
-                  type="checkbox"
-                  checked={settings.theme.darkMode}
-                  onChange={(e) => setSettings(prev => ({
-                    ...prev,
-                    theme: { ...prev.theme, darkMode: e.target.checked }
-                  }))}
-                  className="rounded border-neutral-700 text-blue-600 focus:ring-blue-500"
-                />
-                <label className="ml-2 text-sm font-medium text-neutral-300">
-                  Dark Mode
-                </label>
-              </div>
-            </>
-          )}
-
-          {activeTab === 'platform' && (
-            <>
-              <div>
-                <label className="block text-sm font-medium text-neutral-300">
-                  Site Name
-                </label>
-                <input
-                  type="text"
-                  value={settings.platform.siteName}
-                  onChange={(e) => setSettings(prev => ({
-                    ...prev,
-                    platform: { ...prev.platform, siteName: e.target.value }
-                  }))}
-                  className="mt-1 block w-full rounded-lg bg-neutral-700 border-transparent focus:border-blue-500 focus:ring-0"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-neutral-300">
-                  Description
-                </label>
-                <textarea
-                  value={settings.platform.description}
-                  onChange={(e) => setSettings(prev => ({
-                    ...prev,
-                    platform: { ...prev.platform, description: e.target.value }
-                  }))}
-                  className="mt-1 block w-full rounded-lg bg-neutral-700 border-transparent focus:border-blue-500 focus:ring-0"
-                  rows={3}
-                />
-              </div>
-              <div className="space-y-2">
-                <div className="flex items-center">
-                  <input
-                    type="checkbox"
-                    checked={settings.platform.allowRegistration}
-                    onChange={(e) => setSettings(prev => ({
-                      ...prev,
-                      platform: { ...prev.platform, allowRegistration: e.target.checked }
-                    }))}
-                    className="rounded border-neutral-700 text-blue-600 focus:ring-blue-500"
-                  />
-                  <label className="ml-2 text-sm font-medium text-neutral-300">
-                    Allow New Registrations
-                  </label>
-                </div>
-                <div className="flex items-center">
-                  <input
-                    type="checkbox"
-                    checked={settings.platform.requireEmailVerification}
-                    onChange={(e) => setSettings(prev => ({
-                      ...prev,
-                      platform: { ...prev.platform, requireEmailVerification: e.target.checked }
-                    }))}
-                    className="rounded border-neutral-700 text-blue-600 focus:ring-blue-500"
-                  />
-                  <label className="ml-2 text-sm font-medium text-neutral-300">
-                    Require Email Verification
-                  </label>
-                </div>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-neutral-300">
-                  Max Projects Per User
-                </label>
-                <input
-                  type="number"
-                  value={settings.platform.maxProjectsPerUser}
-                  onChange={(e) => setSettings(prev => ({
-                    ...prev,
-                    platform: { ...prev.platform, maxProjectsPerUser: parseInt(e.target.value) }
-                  }))}
-                  className="mt-1 block w-full rounded-lg bg-neutral-700 border-transparent focus:border-blue-500 focus:ring-0"
-                  min="1"
-                />
-              </div>
-            </>
-          )}
-
-          {activeTab === 'tags' && (
-            <>
+      <div className="bg-white rounded-lg border border-slate-200 shadow-sm p-6">
+        {activeTab === 'tags' && (
+          <div className="space-y-6">
+            <div className="flex justify-between items-center">
+              <h3 className="text-lg font-medium text-slate-800">Project Tags</h3>
               <button
                 onClick={addTag}
-                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors"
+                className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-all duration-200 hover:scale-105 active:scale-95"
               >
-                Add New Tag
+                Add Tag
               </button>
-              <div className="space-y-4">
-                {settings.projectTags.map((tag, index) => (
-                  <div key={tag.id} className="flex items-center space-x-4">
-                    <input
-                      type="text"
-                      value={tag.name}
-                      onChange={(e) => {
-                        const newTags = [...settings.projectTags];
-                        newTags[index].name = e.target.value;
-                        setSettings(prev => ({ ...prev, projectTags: newTags }));
-                      }}
-                      className="flex-1 rounded-lg bg-neutral-700 border-transparent focus:border-blue-500 focus:ring-0"
-                      placeholder="Tag name"
-                    />
-                    <input
-                      type="color"
-                      value={tag.color}
-                      onChange={(e) => {
-                        const newTags = [...settings.projectTags];
-                        newTags[index].color = e.target.value;
-                        setSettings(prev => ({ ...prev, projectTags: newTags }));
-                      }}
-                      className="w-20 h-10 rounded-lg"
-                    />
-                    <button
-                      onClick={() => {
-                        const newTags = settings.projectTags.filter(t => t.id !== tag.id);
-                        setSettings(prev => ({ ...prev, projectTags: newTags }));
-                      }}
-                      className="p-2 text-red-500 hover:bg-red-500/10 rounded-lg"
-                    >
-                      Delete
-                    </button>
-                  </div>
-                ))}
-              </div>
-            </>
-          )}
+            </div>
+            <div className="space-y-4">
+              {settings.projectTags.map((tag, index) => (
+                <div key={tag.id} className="flex items-center gap-4 p-4 bg-slate-50 rounded-lg border border-slate-200">
+                  <input
+                    type="text"
+                    value={tag.name}
+                    onChange={(e) => {
+                      const newTags = [...settings.projectTags];
+                      newTags[index] = { ...tag, name: e.target.value };
+                      setSettings(prev => ({ ...prev, projectTags: newTags }));
+                    }}
+                    placeholder="Tag name"
+                    className="flex-1 px-4 py-2 bg-white rounded-lg border border-slate-200 focus:border-blue-500 focus:ring-blue-500/50"
+                  />
+                  <input
+                    type="color"
+                    value={tag.color}
+                    onChange={(e) => {
+                      const newTags = [...settings.projectTags];
+                      newTags[index] = { ...tag, color: e.target.value };
+                      setSettings(prev => ({ ...prev, projectTags: newTags }));
+                    }}
+                    className="w-12 h-10 rounded border border-slate-200"
+                  />
+                  <button
+                    onClick={() => {
+                      const newTags = settings.projectTags.filter(t => t.id !== tag.id);
+                      setSettings(prev => ({ ...prev, projectTags: newTags }));
+                    }}
+                    className="p-2 text-red-500 hover:text-red-600 rounded-lg hover:bg-red-50 transition-colors"
+                  >
+                    <span className="sr-only">Delete</span>
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
-          {activeTab === 'difficulty' && (
-            <>
+        {activeTab === 'difficulty' && (
+          <div className="space-y-6">
+            <div className="flex justify-between items-center">
+              <h3 className="text-lg font-medium text-slate-800">Difficulty Levels</h3>
               <button
                 onClick={addDifficultyLevel}
-                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors"
+                className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-all duration-200 hover:scale-105 active:scale-95"
               >
-                Add Difficulty Level
+                Add Level
               </button>
-              <div className="space-y-4">
-                {settings.difficultyLevels.map((level, index) => (
-                  <div key={level.id} className="grid grid-cols-4 gap-4 items-center">
-                    <input
-                      type="text"
-                      value={level.name}
-                      onChange={(e) => {
-                        const newLevels = [...settings.difficultyLevels];
-                        newLevels[index].name = e.target.value;
-                        setSettings(prev => ({ ...prev, difficultyLevels: newLevels }));
-                      }}
-                      className="rounded-lg bg-neutral-700 border-transparent focus:border-blue-500 focus:ring-0"
-                      placeholder="Level name"
-                    />
+            </div>
+            <div className="space-y-4">
+              {settings.difficultyLevels.map((level, index) => (
+                <div key={level.id} className="grid grid-cols-3 gap-4 p-4 bg-slate-50 rounded-lg border border-slate-200">
+                  <input
+                    type="text"
+                    value={level.name}
+                    onChange={(e) => {
+                      const newLevels = [...settings.difficultyLevels];
+                      newLevels[index] = { ...level, name: e.target.value };
+                      setSettings(prev => ({ ...prev, difficultyLevels: newLevels }));
+                    }}
+                    placeholder="Level name"
+                    className="px-4 py-2 bg-white rounded-lg border border-slate-200 focus:border-blue-500 focus:ring-blue-500/50"
+                  />
+                  <input
+                    type="number"
+                    value={level.requiredPoints}
+                    onChange={(e) => {
+                      const newLevels = [...settings.difficultyLevels];
+                      newLevels[index] = { ...level, requiredPoints: parseInt(e.target.value) };
+                      setSettings(prev => ({ ...prev, difficultyLevels: newLevels }));
+                    }}
+                    placeholder="Required points"
+                    className="px-4 py-2 bg-white rounded-lg border border-slate-200 focus:border-blue-500 focus:ring-blue-500/50"
+                  />
+                  <div className="flex items-center gap-2">
                     <input
                       type="color"
                       value={level.color}
                       onChange={(e) => {
                         const newLevels = [...settings.difficultyLevels];
-                        newLevels[index].color = e.target.value;
+                        newLevels[index] = { ...level, color: e.target.value };
                         setSettings(prev => ({ ...prev, difficultyLevels: newLevels }));
                       }}
-                      className="w-20 h-10 rounded-lg"
-                    />
-                    <input
-                      type="number"
-                      value={level.requiredPoints}
-                      onChange={(e) => {
-                        const newLevels = [...settings.difficultyLevels];
-                        newLevels[index].requiredPoints = parseInt(e.target.value);
-                        setSettings(prev => ({ ...prev, difficultyLevels: newLevels }));
-                      }}
-                      className="rounded-lg bg-neutral-700 border-transparent focus:border-blue-500 focus:ring-0"
-                      placeholder="Required points"
-                      min="0"
+                      className="w-12 h-10 rounded border border-slate-200"
                     />
                     <button
                       onClick={() => {
                         const newLevels = settings.difficultyLevels.filter(l => l.id !== level.id);
                         setSettings(prev => ({ ...prev, difficultyLevels: newLevels }));
                       }}
-                      className="p-2 text-red-500 hover:bg-red-500/10 rounded-lg"
+                      className="p-2 text-red-500 hover:text-red-600 rounded-lg hover:bg-red-50 transition-colors ml-auto"
                     >
-                      Delete
+                      <span className="sr-only">Delete</span>
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                      </svg>
                     </button>
                   </div>
-                ))}
-              </div>
-            </>
-          )}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
-          {activeTab === 'badges' && (
-            <>
+        {activeTab === 'badges' && (
+          <div className="space-y-6">
+            <div className="flex justify-between items-center">
+              <h3 className="text-lg font-medium text-slate-800">Achievement Badges</h3>
               <button
                 onClick={addBadge}
-                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors"
+                className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-all duration-200 hover:scale-105 active:scale-95"
               >
-                Add Achievement Badge
+                Add Badge
               </button>
-              <div className="space-y-6">
-                {settings.achievementBadges.map((badge, index) => (
-                  <div key={badge.id} className="bg-neutral-800 p-4 rounded-lg space-y-4">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <input
-                        type="text"
-                        value={badge.name}
-                        onChange={(e) => {
-                          const newBadges = [...settings.achievementBadges];
-                          newBadges[index].name = e.target.value;
-                          setSettings(prev => ({ ...prev, achievementBadges: newBadges }));
-                        }}
-                        className="rounded-lg bg-neutral-700 border-transparent focus:border-blue-500 focus:ring-0"
-                        placeholder="Badge name"
-                      />
+            </div>
+            <div className="space-y-4">
+              {settings.achievementBadges.map((badge, index) => (
+                <div key={badge.id} className="grid grid-cols-2 gap-4 p-4 bg-slate-50 rounded-lg border border-slate-200">
+                  <div className="space-y-4">
+                    <input
+                      type="text"
+                      value={badge.name}
+                      onChange={(e) => {
+                        const newBadges = [...settings.achievementBadges];
+                        newBadges[index] = { ...badge, name: e.target.value };
+                        setSettings(prev => ({ ...prev, achievementBadges: newBadges }));
+                      }}
+                      placeholder="Badge name"
+                      className="w-full px-4 py-2 bg-white rounded-lg border border-slate-200 focus:border-blue-500 focus:ring-blue-500/50"
+                    />
+                    <input
+                      type="text"
+                      value={badge.description}
+                      onChange={(e) => {
+                        const newBadges = [...settings.achievementBadges];
+                        newBadges[index] = { ...badge, description: e.target.value };
+                        setSettings(prev => ({ ...prev, achievementBadges: newBadges }));
+                      }}
+                      placeholder="Description"
+                      className="w-full px-4 py-2 bg-white rounded-lg border border-slate-200 focus:border-blue-500 focus:ring-blue-500/50"
+                    />
+                  </div>
+                  <div className="space-y-4">
+                    <div className="flex items-center gap-2">
                       <input
                         type="text"
                         value={badge.icon}
                         onChange={(e) => {
                           const newBadges = [...settings.achievementBadges];
-                          newBadges[index].icon = e.target.value;
+                          newBadges[index] = { ...badge, icon: e.target.value };
                           setSettings(prev => ({ ...prev, achievementBadges: newBadges }));
                         }}
-                        className="rounded-lg bg-neutral-700 border-transparent focus:border-blue-500 focus:ring-0"
-                        placeholder="Badge icon (emoji)"
-                      />
-                    </div>
-                    <textarea
-                      value={badge.description}
-                      onChange={(e) => {
-                        const newBadges = [...settings.achievementBadges];
-                        newBadges[index].description = e.target.value;
-                        setSettings(prev => ({ ...prev, achievementBadges: newBadges }));
-                      }}
-                      className="w-full rounded-lg bg-neutral-700 border-transparent focus:border-blue-500 focus:ring-0"
-                      placeholder="Badge description"
-                      rows={2}
-                    />
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <input
-                        type="text"
-                        value={badge.requirement}
-                        onChange={(e) => {
-                          const newBadges = [...settings.achievementBadges];
-                          newBadges[index].requirement = e.target.value;
-                          setSettings(prev => ({ ...prev, achievementBadges: newBadges }));
-                        }}
-                        className="rounded-lg bg-neutral-700 border-transparent focus:border-blue-500 focus:ring-0"
-                        placeholder="Achievement requirement"
+                        placeholder="Icon (emoji)"
+                        className="w-20 px-4 py-2 bg-white rounded-lg border border-slate-200 focus:border-blue-500 focus:ring-blue-500/50"
                       />
                       <input
                         type="number"
                         value={badge.points}
                         onChange={(e) => {
                           const newBadges = [...settings.achievementBadges];
-                          newBadges[index].points = parseInt(e.target.value);
+                          newBadges[index] = { ...badge, points: parseInt(e.target.value) };
                           setSettings(prev => ({ ...prev, achievementBadges: newBadges }));
                         }}
-                        className="rounded-lg bg-neutral-700 border-transparent focus:border-blue-500 focus:ring-0"
-                        placeholder="Points awarded"
-                        min="0"
+                        placeholder="Points"
+                        className="flex-1 px-4 py-2 bg-white rounded-lg border border-slate-200 focus:border-blue-500 focus:ring-blue-500/50"
                       />
+                      <button
+                        onClick={() => {
+                          const newBadges = settings.achievementBadges.filter(b => b.id !== badge.id);
+                          setSettings(prev => ({ ...prev, achievementBadges: newBadges }));
+                        }}
+                        className="p-2 text-red-500 hover:text-red-600 rounded-lg hover:bg-red-50 transition-colors"
+                      >
+                        <span className="sr-only">Delete</span>
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                      </button>
                     </div>
-                    <button
-                      onClick={() => {
-                        const newBadges = settings.achievementBadges.filter(b => b.id !== badge.id);
+                    <input
+                      type="text"
+                      value={badge.requirement}
+                      onChange={(e) => {
+                        const newBadges = [...settings.achievementBadges];
+                        newBadges[index] = { ...badge, requirement: e.target.value };
                         setSettings(prev => ({ ...prev, achievementBadges: newBadges }));
                       }}
-                      className="w-full p-2 text-red-500 hover:bg-red-500/10 rounded-lg"
-                    >
-                      Delete Badge
-                    </button>
+                      placeholder="Requirement"
+                      className="w-full px-4 py-2 bg-white rounded-lg border border-slate-200 focus:border-blue-500 focus:ring-blue-500/50"
+                    />
                   </div>
-                ))}
-              </div>
-            </>
-          )}
-        </div>
-
-        {/* Preview Panel */}
-        <div className="bg-neutral-800 p-6 rounded-lg">
-          <h3 className="text-lg font-medium mb-4">Preview</h3>
-          {/* Add preview content here */}
-        </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
-} 
+}

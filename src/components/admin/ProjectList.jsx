@@ -55,18 +55,18 @@ export function ProjectList({ onNewProject, onEditProject, categories, difficult
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h2 className="text-xl font-bold">Projects</h2>
+      <div className="flex justify-between items-center mb-6">
+        <h2 className="text-2xl font-semibold text-slate-800">Projects</h2>
         <button
           onClick={onNewProject}
-          className="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors"
+          className="px-5 py-2 bg-blue-500 text-white rounded-full hover:bg-blue-600 transition-colors duration-200 active:scale-95"
         >
           Add New Project
         </button>
       </div>
 
       {error && (
-        <div className="bg-red-500/10 border border-red-500/50 text-red-500 p-4 rounded-lg">
+        <div className="bg-red-100 border border-red-400 text-red-700 p-4 rounded-lg">
           {error}
         </div>
       )}
@@ -78,13 +78,13 @@ export function ProjectList({ onNewProject, onEditProject, categories, difficult
           placeholder="Search projects..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
-          className="px-4 py-2 bg-neutral-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="px-4 py-2 bg-slate-100 border border-slate-200 rounded-full text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all duration-200"
         />
         
         <select
           value={filterCategory}
           onChange={(e) => setFilterCategory(e.target.value)}
-          className="px-4 py-2 bg-neutral-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="px-4 py-2 bg-slate-100 border border-slate-200 rounded-full text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all duration-200"
         >
           <option value="all">All Categories</option>
           {categories.map(category => (
@@ -97,7 +97,7 @@ export function ProjectList({ onNewProject, onEditProject, categories, difficult
         <select
           value={filterDifficulty}
           onChange={(e) => setFilterDifficulty(e.target.value)}
-          className="px-4 py-2 bg-neutral-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="px-4 py-2 bg-slate-100 border border-slate-200 rounded-full text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all duration-200"
         >
           <option value="all">All Difficulties</option>
           {difficultyLevels.map(level => (
@@ -113,30 +113,30 @@ export function ProjectList({ onNewProject, onEditProject, categories, difficult
         {filteredProjects.map(project => (
           <div
             key={project.id}
-            className="bg-neutral-800 p-6 rounded-lg"
+            className="bg-white p-6 rounded-lg border border-slate-200 shadow-sm hover:shadow-md transition-shadow duration-200"
           >
             <div className="flex justify-between items-start">
               <div>
-                <h3 className="text-lg font-medium">{project.title}</h3>
-                <p className="text-neutral-400 mt-1">{project.description}</p>
+                <h3 className="text-lg font-medium text-slate-800">{project.title}</h3>
+                <p className="text-slate-600 mt-1">{project.description}</p>
                 
                 <div className="flex flex-wrap gap-2 mt-4">
-                  <span className={`px-2 py-1 rounded text-sm ${
-                    project.difficulty === 'beginner' ? 'bg-green-500/10 text-green-500' :
-                    project.difficulty === 'intermediate' ? 'bg-blue-500/10 text-blue-500' :
-                    'bg-red-500/10 text-red-500'
+                  <span className={`px-3 py-1 rounded-full text-sm font-medium ${
+                    project.difficulty === 'beginner' ? 'bg-green-100 text-green-800' :
+                    project.difficulty === 'intermediate' ? 'bg-yellow-100 text-yellow-800' :
+                    'bg-red-100 text-red-800'
                   }`}>
                     {project.difficulty.charAt(0).toUpperCase() + project.difficulty.slice(1)}
                   </span>
                   
-                  <span className="px-2 py-1 bg-neutral-700 rounded text-sm">
+                  <span className="px-3 py-1 bg-slate-100 text-slate-700 rounded-full text-sm font-medium">
                     {categories.find(c => c.id === project.category)?.name || project.category}
                   </span>
 
                   {project.tags?.map(tag => (
                     <span
                       key={tag}
-                      className="px-2 py-1 bg-neutral-700 rounded text-sm"
+                      className="px-3 py-1 bg-slate-100 text-slate-700 rounded-full text-sm font-medium"
                     >
                       {tag}
                     </span>
@@ -147,13 +147,13 @@ export function ProjectList({ onNewProject, onEditProject, categories, difficult
               <div className="flex gap-2">
                 <button
                   onClick={() => onEditProject(project)}
-                  className="px-3 py-1 bg-blue-600 hover:bg-blue-700 rounded transition-colors"
+                  className="px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-full transition-colors duration-200 active:scale-95"
                 >
                   Edit
                 </button>
                 <button
                   onClick={() => handleDelete(project.id)}
-                  className="px-3 py-1 bg-red-600 hover:bg-red-700 rounded transition-colors"
+                  className="px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-full transition-colors duration-200 active:scale-95"
                 >
                   Delete
                 </button>
@@ -163,7 +163,7 @@ export function ProjectList({ onNewProject, onEditProject, categories, difficult
         ))}
 
         {filteredProjects.length === 0 && (
-          <div className="text-center py-8 text-neutral-400">
+          <div className="text-center py-8 text-slate-500">
             No projects found matching your filters.
           </div>
         )}
