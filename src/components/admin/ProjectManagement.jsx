@@ -25,53 +25,32 @@ export function ProjectManagement() {
   ];
 
   return (
-    <div className="space-y-6">
-      {/* Navigation Tabs */}
-      <div className="flex space-x-4 border-b border-neutral-700">
-        <button
-          onClick={() => setActiveView('list')}
-          className={`px-4 py-2 -mb-px ${
-            activeView === 'list'
-              ? 'border-b-2 border-blue-500 text-blue-500'
-              : 'text-neutral-400 hover:text-white'
-          }`}
-        >
-          Projects
-        </button>
-        <button
-          onClick={() => setActiveView('templates')}
-          className={`px-4 py-2 -mb-px ${
-            activeView === 'templates'
-              ? 'border-b-2 border-blue-500 text-blue-500'
-              : 'text-neutral-400 hover:text-white'
-          }`}
-        >
-          Templates
-        </button>
-        <button
-          onClick={() => setActiveView('import-export')}
-          className={`px-4 py-2 -mb-px ${
-            activeView === 'import-export'
-              ? 'border-b-2 border-blue-500 text-blue-500'
-              : 'text-neutral-400 hover:text-white'
-          }`}
-        >
-          Import/Export
-        </button>
-        <button
-          onClick={() => setActiveView('stats')}
-          className={`px-4 py-2 -mb-px ${
-            activeView === 'stats'
-              ? 'border-b-2 border-blue-500 text-blue-500'
-              : 'text-neutral-400 hover:text-white'
-          }`}
-        >
-          Statistics
-        </button>
+    <div className="p-6">
+      {/* Navigation Pills */}
+      <div className="flex flex-wrap gap-3 mb-8 border-b border-neutral-700 pb-4">
+        {[
+          { id: 'list', label: '📋 Project List' },
+          { id: 'form', label: '✏️ Add/Edit Project' },
+          { id: 'templates', label: '📑 Templates' },
+          { id: 'import-export', label: '💾 Import/Export' },
+          { id: 'stats', label: '📊 Statistics' }
+        ].map(view => (
+          <button
+            key={view.id}
+            onClick={() => setActiveView(view.id)}
+            className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${
+              activeView === view.id
+                ? 'bg-blue-600 text-white'
+                : 'bg-neutral-700/50 text-neutral-400 hover:bg-neutral-700 hover:text-white'
+            }`}
+          >
+            {view.label}
+          </button>
+        ))}
       </div>
 
       {/* Content Area */}
-      <div>
+      <div className="bg-neutral-900 rounded-lg">
         {activeView === 'list' && (
           <ProjectList
             onNewProject={() => {

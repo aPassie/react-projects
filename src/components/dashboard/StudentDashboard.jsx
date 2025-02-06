@@ -1,115 +1,192 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
-import { db, collection, getDocs, query, orderBy } from '../../config/firebase';
+import { db, collection, getDocs, query, orderBy, doc, updateDoc } from '../../config/firebase';
 
 export function StudentDashboard() {
-  const [error, setError] = useState('');
-  const [projects, setProjects] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const { currentUser, logout } = useAuth();
-  const navigate = useNavigate();
+    const [error, setError] = useState('');
+    const [projects, setProjects] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [filter, setFilter] = useState('All');
+    const [searchTerm, setSearchTerm] = useState('');
+    const { currentUser, logout } = useAuth();
+    const navigate = useNavigate();
+    const [userName, setUserName] = useState('');
 
-  useEffect(() => {
-    fetchProjects();
-  }, []);
+    useEffect(() => {
+        fetchProjects();
+        fetchUserName();
+    }, []);
 
-  const fetchProjects = async () => {
-    try {
-      const projectsQuery = query(collection(db, 'projects'), orderBy('createdAt', 'desc'));
-      const snapshot = await getDocs(projectsQuery);
-      const projectsData = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      }));
-      setProjects(projectsData);
-    } catch (err) {
-      setError('Failed to fetch projects: ' + err.message);
-    } finally {
-      setLoading(false);
-    }
-  };
+    const fetchUserName = async () => {
+        if (currentUser) {
+            try {
+                const userDocSnap = await getDocs(query(collection(db, "users")));
+                if (userDocSnap.docs.length > 0) {
+                    const userData = userDocSnap.docs[0].data();
+                    setUserName(userData.name || 'User');
+                }
+            } catch (err) {
+                console.error("Failed to fetch user's name:", err);
+                setUserName('User');
+            }
+        }
+    };
 
-  const handleSignOut = async () => {
-    try {
-      await logout();
-      navigate('/login');
-    } catch (error) {
-      setError('Failed to sign out: ' + error.message);
-    }
-  };
+    const fetchProjects = async () => {
+        try {
+            const projectsQuery = query(collection(db, 'projects'), orderBy('createdAt', 'desc'));
+            const snapshot = await getDocs(projectsQuery);
+            const projectsData = snapshot.docs.map(doc => ({
+                id: doc.id,
+                ...doc.data()
+            }));
+            setProjects(projectsData);
+        } catch (err) {
+            setError('Failed to fetch projects: ' + err.message);
+        } finally {
+            setLoading(false);
+        }
+    };
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
-      </div>
+    const handleSignOut = async () => {
+        try {
+            await logout();
+            navigate('/login');
+        } catch (error) {
+            setError('Failed to sign out: ' + error.message);
+        }
+    };
+
+    const filteredProjects = projects.filter(project =>
+        (filter === 'All' || project.difficulty === filter.toLowerCase()) &&
+        project.title.toLowerCase().includes(searchTerm.toLowerCase())
     );
-  }
 
-  return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="flex justify-between items-center mb-8">
-        <div>
-          <h1 className="text-3xl font-bold">Student Dashboard</h1>
-          <p className="text-neutral-400">{currentUser.email}</p>
+    const handleFilterChange = (newFilter) => {
+        setFilter(newFilter);
+    };
+
+    const handleSearchChange = (event) => {
+        setSearchTerm(event.target.value);
+    };
+
+    if (loading) {
+      return (
+        <div className="flex items-center justify-center min-h-screen bg-slate-100">
+          <div className="relative">
+            <div className="animate-spin rounded-full h-12 w-12 border-t-4 border-b-4 border-slate-500"></div>
+            <div className="absolute inset-0 flex items-center justify-center">
+              <div className="h-4 w-4 rounded-full bg-slate-500"></div>
+            </div>
+          </div>
         </div>
-        <button
-          onClick={handleSignOut}
-          className="px-4 py-2 bg-red-600 hover:bg-red-700 rounded-lg transition-colors"
-        >
-          Sign Out
-        </button>
-      </div>
+      );
+    }
+    return (
+        <div className="flex flex-col min-h-screen bg-slate-100 text-slate-800">
+          <header className="bg-white py-4 px-8 flex justify-between items-center border-b border-slate-200 shadow-sm">
+            <div>
+              <h1 className="text-3xl font-semibold">Welcome, {userName}!</h1>
+              <p className="text-slate-600">{currentUser.email}</p>
+            </div>
+            <div className="flex items-center space-x-4">
+              <input
+                type="text"
+                placeholder="Search projects..."
+                value={searchTerm}
+                onChange={handleSearchChange}
+                className="px-4 py-2 bg-slate-50 rounded-full text-slate-700 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/50 border border-slate-200 transition-all duration-200"
+              />
+              <button
+                onClick={handleSignOut}
+                className="px-5 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-full transition-colors duration-200 active:scale-95"
+              >
+                Sign Out
+              </button>
+            </div>
+          </header>
 
-      {error && (
-        <div className="mb-8 bg-red-500/10 border border-red-500/50 text-red-500 p-4 rounded-lg">
-          {error}
-        </div>
-      )}
-
-      {/* Projects Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {projects.map(project => (
-          <div
-            key={project.id}
-            onClick={() => navigate(`/projects/${project.id}`)}
-            className="bg-neutral-800 rounded-lg overflow-hidden hover:bg-neutral-700 transition-colors cursor-pointer"
-          >
-            <div className="p-6">
-              <div className="flex justify-between items-start mb-4">
-                <h3 className="text-lg font-medium">{project.title}</h3>
-                <span className={`px-2 py-1 rounded text-sm ${
-                  project.difficulty === 'beginner' ? 'bg-green-500/10 text-green-500' :
-                  project.difficulty === 'intermediate' ? 'bg-blue-500/10 text-blue-500' :
-                  'bg-red-500/10 text-red-500'
-                }`}>
-                  {project.difficulty}
-                </span>
-              </div>
-              
-              <p className="text-neutral-400 mb-4 line-clamp-2">{project.description}</p>
-              
-              <div className="flex flex-wrap gap-2">
-                {project.tags?.map(tag => (
-                  <span
-                    key={tag}
-                    className="px-2 py-1 bg-neutral-700 rounded text-sm"
+          <main className="flex-grow px-8 py-10">
+            <div className="mb-8">
+              <h2 className="text-2xl font-semibold mb-4">Filter Projects</h2>
+              <div className="flex space-x-4">
+                {['All', 'Beginner', 'Intermediate', 'Advanced'].map(level => (
+                    <button
+                    key={level}
+                    onClick={() => handleFilterChange(level)}
+                    className={`px-4 py-2 rounded-full transition duration-200 ${
+                      filter === level
+                        ? 'bg-blue-500 text-white'
+                        : 'bg-slate-200 hover:bg-slate-300 text-slate-700'
+                    } active:scale-95`}
                   >
-                    {tag}
-                  </span>
+                    {level}
+                  </button>
                 ))}
               </div>
             </div>
-          </div>
-        ))}
-      </div>
 
-      {projects.length === 0 && !loading && (
-        <div className="text-center py-8 text-neutral-400">
-          No projects available.
+            {error && (
+              <div className="mb-8 bg-red-100 border border-red-400 text-red-700 p-4 rounded-lg">
+                {error}
+              </div>
+            )}
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+              {filteredProjects.map(project => (
+                <div
+                  key={project.id}
+                  onClick={() => navigate(`/projects/${project.id}`)}
+                  className="bg-white/80 rounded-lg border border-slate-200/50 backdrop-blur-md overflow-hidden transition-all duration-300 hover:scale-105 hover:shadow-lg hover:bg-white/90 cursor-pointer"
+                >
+                  <div className="p-6">
+                    <div className="flex justify-between items-start mb-2">
+                    <span className={`px-3 py-1 rounded-full text-sm font-medium ${
+                        project.difficulty === 'beginner'
+                          ? 'bg-green-100 text-green-800'
+                          : project.difficulty === 'intermediate'
+                          ? 'bg-yellow-100 text-yellow-800'
+                          : 'bg-red-100 text-red-800'
+                      }`}>
+                        {project.difficulty.charAt(0).toUpperCase() + project.difficulty.slice(1)}
+                      </span>
+                      <span className="text-sm text-slate-500">
+                        {project.progress ? `${project.progress}% Complete` : '0% Complete'}
+                      </span>
+                    </div>
+
+                    <div className="mb-3">
+                      <h3 className="text-xl font-semibold text-slate-800">{project.title}</h3>
+                    </div>
+
+                    <p className="text-slate-600 mb-4 line-clamp-2">
+                      {project.description}
+                    </p>
+
+                    <div className="flex flex-wrap gap-2">
+                      {project.tags?.map(tag => (
+                        <span
+                        key={tag}
+                        className="px-2 py-1 bg-slate-200/75 rounded-full text-sm text-slate-600 transition-colors duration-200 hover:bg-slate-300/75"
+                      >
+                        {tag}
+                      </span>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+            {filteredProjects.length === 0 && !loading && (
+              <div className="text-center py-8 text-slate-500">
+                No projects available matching your criteria.
+              </div>
+            )}
+          </main>
+          <footer className="bg-white text-slate-600 text-center py-6 mt-auto border-t border-slate-200">
+            {new Date().getFullYear()} Your App Name. All rights reserved.
+          </footer>
         </div>
-      )}
-    </div>
-  );
-} 
+      );
+    }

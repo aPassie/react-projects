@@ -177,7 +177,13 @@ export function ProjectStats() {
                 plugins: {
                   legend: {
                     position: 'right',
-                    labels: { color: '#9CA3AF' }
+                    labels: { 
+                      color: '#9CA3AF',
+                      font: {
+                        size: 12
+                      },
+                      padding: 20
+                    }
                   }
                 }
               }}
@@ -206,19 +212,38 @@ export function ProjectStats() {
                 scales: {
                   y: {
                     beginAtZero: true,
-                    ticks: { color: '#9CA3AF' }
-                  },
-                  x: {
+                    grid: {
+                      color: 'rgba(255, 255, 255, 0.1)',
+                      borderColor: 'rgba(255, 255, 255, 0.1)'
+                    },
                     ticks: { 
                       color: '#9CA3AF',
-                      maxRotation: 45,
-                      minRotation: 45
+                      font: {
+                        size: 12
+                      }
+                    }
+                  },
+                  x: {
+                    grid: {
+                      color: 'rgba(255, 255, 255, 0.1)',
+                      borderColor: 'rgba(255, 255, 255, 0.1)'
+                    },
+                    ticks: { 
+                      color: '#9CA3AF',
+                      font: {
+                        size: 12
+                      }
                     }
                   }
                 },
                 plugins: {
                   legend: {
-                    labels: { color: '#9CA3AF' }
+                    labels: { 
+                      color: '#9CA3AF',
+                      font: {
+                        size: 12
+                      }
+                    }
                   }
                 }
               }}

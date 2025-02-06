@@ -91,74 +91,72 @@ export function AdminDashboard() {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="flex flex-col md:flex-row justify-between items-center mb-8">
-        <div>
-          <h1 className="text-2xl font-bold mb-2">
-            Welcome {currentUser?.displayName || currentUser?.email}
-          </h1>
-          <p className="text-neutral-400">Admin Dashboard</p>
+    <div className="min-h-screen bg-neutral-900 flex">
+      {/* Sidebar Navigation */}
+      <div className="w-64 bg-neutral-800 border-r border-neutral-700 fixed h-full">
+        <div className="p-4 border-b border-neutral-700">
+          <h1 className="text-xl font-bold">Admin Panel</h1>
+          <p className="text-sm text-neutral-400 mt-1">
+            {currentUser?.displayName || currentUser?.email}
+          </p>
         </div>
-        <div className="flex space-x-4 mt-4 md:mt-0">
-          <button
-            onClick={() => setActiveTab('analytics')}
-            className={`px-4 py-2 rounded-lg transition-colors ${
-              activeTab === 'analytics'
-                ? 'bg-blue-600 text-white'
-                : 'bg-neutral-800 hover:bg-neutral-700'
-            }`}
-          >
-            Analytics
-          </button>
-          <button
-            onClick={() => setActiveTab('projects')}
-            className={`px-4 py-2 rounded-lg transition-colors ${
-              activeTab === 'projects'
-                ? 'bg-blue-600 text-white'
-                : 'bg-neutral-800 hover:bg-neutral-700'
-            }`}
-          >
-            Projects
-          </button>
-          <button
-            onClick={() => setActiveTab('students')}
-            className={`px-4 py-2 rounded-lg transition-colors ${
-              activeTab === 'students'
-                ? 'bg-blue-600 text-white'
-                : 'bg-neutral-800 hover:bg-neutral-700'
-            }`}
-          >
-            Students
-          </button>
-          <button
-            onClick={() => setActiveTab('settings')}
-            className={`px-4 py-2 rounded-lg transition-colors ${
-              activeTab === 'settings'
-                ? 'bg-blue-600 text-white'
-                : 'bg-neutral-800 hover:bg-neutral-700'
-            }`}
-          >
-            Settings
-          </button>
+        
+        <nav className="p-4">
+          {[
+            { id: 'analytics', label: 'Analytics', icon: '📊' },
+            { id: 'projects', label: 'Projects', icon: '📂' },
+            { id: 'students', label: 'Students', icon: '👥' },
+            { id: 'settings', label: 'Settings', icon: '⚙️' }
+          ].map(tab => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg mb-2 transition-all ${
+                activeTab === tab.id
+                  ? 'bg-blue-600 text-white'
+                  : 'text-neutral-400 hover:bg-neutral-700 hover:text-white'
+              }`}
+            >
+              <span>{tab.icon}</span>
+              <span>{tab.label}</span>
+            </button>
+          ))}
+        </nav>
+
+        <div className="absolute bottom-0 w-full p-4 border-t border-neutral-700">
           <button
             onClick={handleLogout}
-            className="px-4 py-2 rounded-lg bg-red-600 hover:bg-red-700 transition-colors text-white"
+            className="w-full px-4 py-2 text-neutral-400 hover:text-white hover:bg-neutral-700 rounded-lg transition-all"
           >
-            Log Out
+            Sign Out
           </button>
         </div>
       </div>
 
-      {error && (
-        <div className="mb-8 bg-red-500/10 border border-red-500/50 text-red-500 p-4 rounded-lg">
-          {error}
+      {/* Main Content */}
+      <div className="ml-64 flex-1">
+        {/* Header */}
+        <div className="bg-neutral-800 border-b border-neutral-700 p-6">
+          <h2 className="text-2xl font-bold">
+            {activeTab.charAt(0).toUpperCase() + activeTab.slice(1)}
+          </h2>
         </div>
-      )}
 
-      {activeTab === 'analytics' && <DashboardAnalytics />}
-      {activeTab === 'projects' && <ProjectManagement />}
-      {activeTab === 'students' && <StudentManagement />}
-      {activeTab === 'settings' && <SettingsManagement />}
+        {/* Error Display */}
+        {error && (
+          <div className="m-6 bg-red-500/10 border border-red-500/50 text-red-500 p-4 rounded-lg">
+            {error}
+          </div>
+        )}
+
+        {/* Content Area */}
+        <div className="p-6">
+          {activeTab === 'analytics' && <DashboardAnalytics />}
+          {activeTab === 'projects' && <ProjectManagement />}
+          {activeTab === 'students' && <StudentManagement />}
+          {activeTab === 'settings' && <SettingsManagement />}
+        </div>
+      </div>
     </div>
   );
 } 

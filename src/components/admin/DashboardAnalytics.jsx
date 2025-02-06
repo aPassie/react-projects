@@ -178,15 +178,38 @@ export function DashboardAnalytics() {
               scales: {
                 y: {
                   beginAtZero: true,
-                  ticks: { color: '#9CA3AF' }
+                  grid: {
+                    color: 'rgba(255, 255, 255, 0.1)',
+                    borderColor: 'rgba(255, 255, 255, 0.1)'
+                  },
+                  ticks: { 
+                    color: '#9CA3AF',
+                    font: {
+                      size: 12
+                    }
+                  }
                 },
                 x: {
-                  ticks: { color: '#9CA3AF' }
+                  grid: {
+                    color: 'rgba(255, 255, 255, 0.1)',
+                    borderColor: 'rgba(255, 255, 255, 0.1)'
+                  },
+                  ticks: { 
+                    color: '#9CA3AF',
+                    font: {
+                      size: 12
+                    }
+                  }
                 }
               },
               plugins: {
                 legend: {
-                  labels: { color: '#9CA3AF' }
+                  labels: { 
+                    color: '#9CA3AF',
+                    font: {
+                      size: 12
+                    }
+                  }
                 }
               }
             }}
@@ -227,15 +250,38 @@ export function DashboardAnalytics() {
               scales: {
                 y: {
                   beginAtZero: true,
-                  ticks: { color: '#9CA3AF' }
+                  grid: {
+                    color: 'rgba(255, 255, 255, 0.1)',
+                    borderColor: 'rgba(255, 255, 255, 0.1)'
+                  },
+                  ticks: { 
+                    color: '#9CA3AF',
+                    font: {
+                      size: 12
+                    }
+                  }
                 },
                 x: {
-                  ticks: { color: '#9CA3AF' }
+                  grid: {
+                    color: 'rgba(255, 255, 255, 0.1)',
+                    borderColor: 'rgba(255, 255, 255, 0.1)'
+                  },
+                  ticks: { 
+                    color: '#9CA3AF',
+                    font: {
+                      size: 12
+                    }
+                  }
                 }
               },
               plugins: {
                 legend: {
-                  labels: { color: '#9CA3AF' }
+                  labels: { 
+                    color: '#9CA3AF',
+                    font: {
+                      size: 12
+                    }
+                  }
                 }
               }
             }}
