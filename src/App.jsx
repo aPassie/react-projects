@@ -1,129 +1,111 @@
-import { useState } from 'react';
-import { ProjectList } from './components/ProjectList';
-import { ProjectSteps } from './components/ProjectSteps';
-import { LearningPaths } from './components/LearningPaths';
-import { Header } from './components/Header';
-import { Footer } from './components/Footer';
-import { UserProfile } from './components/UserProfile';
-import { useLocalStorage } from './hooks/useLocalStorage';
-import { ToastContainer, toast } from 'react-toastify';
-import 'react-toastify/dist/ReactToastify.css';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { ThemeProvider } from './contexts/ThemeContext';
+import { AuthProvider } from './contexts/AuthContext';
+import { Login } from './components/auth/Login';
+import { StudentDashboard } from './components/dashboard/StudentDashboard';
+import { AdminDashboard } from './components/dashboard/AdminDashboard';
+import { ProjectDetails } from './components/projects/ProjectDetails';
+import { NotFound } from './components/common/NotFound';
+import { useAuth } from './contexts/AuthContext';
 
-function App() {
-  const [selectedProject, setSelectedProject] = useState(null);
-  const [completedProjects, setCompletedProjects] = useLocalStorage('completedProjects', []);
-  const [projectProgress, setProjectProgress] = useLocalStorage('projectProgress', {});
-  const [view, setView] = useState('home'); // 'home', 'projects', 'learning', 'profile'
+// Protected Route wrapper component
+function ProtectedRoute({ children, requireAdmin = false }) {
+  const { currentUser, isAdmin, loading } = useAuth();
 
-  const handleProjectComplete = (projectId) => {
-    if (!completedProjects.includes(projectId)) {
-      setCompletedProjects([...completedProjects, projectId]);
-      // Reset progress for this project since it's completed
-      setProjectProgress(prev => ({
-        ...prev,
-        [projectId]: 0
-      }));
-      // Show success message
-      toast.success('🎉 Project completed! Next project unlocked!', {
-        position: "bottom-right",
-        autoClose: 3000,
-        hideProgressBar: false,
-        closeOnClick: true,
-        pauseOnHover: true,
-        draggable: true,
-      });
-      // Return to project list after completion
-      setSelectedProject(null);
-      setView('projects');
-    }
-  };
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+      </div>
+    );
+  }
 
-  const updateProgress = (projectId, stepIndex) => {
-    setProjectProgress(prev => ({
-      ...prev,
-      [projectId]: Math.max((prev[projectId] || 0), stepIndex + 1)
-    }));
-  };
+  if (!currentUser) {
+    return <Navigate to="/login" />;
+  }
 
-  const renderContent = () => {
-    if (selectedProject) {
-      return (
-        <ProjectSteps
-          project={selectedProject}
-          progress={projectProgress[selectedProject.id] || 0}
-          onBack={() => setSelectedProject(null)}
-          onComplete={handleProjectComplete}
-          onProgressUpdate={(stepIndex) => updateProgress(selectedProject.id, stepIndex)}
-        />
-      );
-    }
+  if (requireAdmin && !isAdmin) {
+    return <Navigate to="/dashboard" />;
+  }
 
-    switch (view) {
-      case 'home':
-        return (
-          <div className="text-center py-20 px-4">
-            <h1 className="text-5xl font-bold mb-8 animate-fade-in">
-              Learn React Through Projects
-            </h1>
-            <p className="text-xl text-neutral-300 mb-12 max-w-2xl mx-auto">
-              Master React with hands-on experience. Start with beginner-friendly projects
-              and progress to advanced applications.
-            </p>
-            <div className="flex flex-col md:flex-row gap-4 justify-center">
-              <button
-                onClick={() => setView('projects')}
-                className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-8 rounded-lg transition-colors"
-              >
-                Start Learning
-              </button>
-              <button
-                onClick={() => setView('learning')}
-                className="bg-neutral-700 hover:bg-neutral-600 text-white font-bold py-3 px-8 rounded-lg transition-colors"
-              >
-                View Learning Paths
-              </button>
-            </div>
-          </div>
-        );
-      case 'projects':
-        return (
-          <ProjectList
-            completedProjects={completedProjects}
-            projectProgress={projectProgress}
-            onProjectSelect={setSelectedProject}
-          />
-        );
-      case 'learning':
-        return (
-          <LearningPaths onSelectProject={setSelectedProject} />
-        );
-      case 'profile':
-        return (
-          <UserProfile
-            completedProjects={completedProjects}
-            projectProgress={projectProgress}
-          />
-        );
-      default:
-        return null;
-    }
-  };
+  return children;
+}
+
+function AppRoutes() {
+  const { currentUser, isAdmin, loading } = useAuth();
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+      </div>
+    );
+  }
 
   return (
-    <div className="min-h-screen bg-neutral-900 text-white flex flex-col">
-      <Header onNavigate={setView} currentView={view} />
-
-      <main className="container mx-auto px-4 py-8 flex-grow">
-        {renderContent()}
-      </main>
-
-      <Footer />
-      <ToastContainer
-        position="bottom-right"
-        theme="dark"
-        autoClose={3000}
+    <Routes>
+      {/* Public Routes */}
+      <Route 
+        path="/login" 
+        element={currentUser ? <Navigate to={isAdmin ? "/admin" : "/dashboard"} /> : <Login />} 
       />
-    </div>
+
+      {/* Protected Routes */}
+      <Route 
+        path="/dashboard" 
+        element={
+          <ProtectedRoute>
+            <StudentDashboard />
+          </ProtectedRoute>
+        } 
+      />
+      <Route 
+        path="/admin" 
+        element={
+          <ProtectedRoute requireAdmin>
+            <AdminDashboard />
+          </ProtectedRoute>
+        } 
+      />
+      <Route 
+        path="/projects/:projectId" 
+        element={
+          <ProtectedRoute>
+            <ProjectDetails />
+          </ProtectedRoute>
+        } 
+      />
+
+      {/* Root Route */}
+      <Route 
+        path="/" 
+        element={
+          <Navigate to={
+            !currentUser 
+              ? "/login" 
+              : isAdmin 
+                ? "/admin" 
+                : "/dashboard"
+          } 
+          />
+        } 
+      />
+
+      {/* 404 Route */}
+      <Route path="*" element={<NotFound />} />
+    </Routes>
+  );
+}
+
+function App() {
+  return (
+    <AuthProvider>
+      <BrowserRouter>
+        <ThemeProvider>
+          <AppRoutes />
+        </ThemeProvider>
+      </BrowserRouter>
+    </AuthProvider>
   );
 }
 
