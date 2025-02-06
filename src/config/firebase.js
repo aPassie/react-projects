@@ -4,7 +4,8 @@ import {
   GoogleAuthProvider,
   signInWithPopup,
   signOut,
-  onAuthStateChanged
+  onAuthStateChanged,
+  signInWithEmailAndPassword
 } from 'firebase/auth';
 import { 
   getFirestore, 
@@ -18,7 +19,8 @@ import {
   setDoc,
   query,
   orderBy,
-  where
+  where,
+  collectionGroup
 } from 'firebase/firestore';
 import {
   getStorage,
@@ -50,6 +52,7 @@ export {
   signInWithPopup,
   signOut,
   onAuthStateChanged,
+  signInWithEmailAndPassword,
   collection,
   doc,
   addDoc,
@@ -61,6 +64,7 @@ export {
   query,
   orderBy,
   where,
+  collectionGroup,
   ref,
   uploadBytes,
   getDownloadURL,

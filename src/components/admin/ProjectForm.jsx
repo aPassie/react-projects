@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { db, collection, addDoc, updateDoc, doc } from '../../config/firebase';
 import { ProjectContent } from './ProjectContent';
+import Editor from "@monaco-editor/react";
 
 export function ProjectForm({ project = null, onComplete, categories, difficultyLevels }) {
   const [formData, setFormData] = useState({
@@ -11,7 +12,13 @@ export function ProjectForm({ project = null, onComplete, categories, difficulty
     prerequisites: project?.prerequisites || [],
     estimatedHours: project?.estimatedHours || '',
     learningObjectives: project?.learningObjectives || [],
-    steps: project?.steps || [{ title: '', description: '' }],
+    steps: project?.steps || [{
+      title: '',
+      description: '',
+      code: '',
+      hint: '',
+      tips: []
+    }],
     resources: project?.resources || [],
     tags: project?.tags?.join(', ') || '',
     content: project?.content || {
@@ -86,17 +93,45 @@ export function ProjectForm({ project = null, onComplete, categories, difficulty
     setFormData(prev => ({ ...prev, learningObjectives: newObjectives }));
   };
 
-  const addStep = () => {
+  const handleStepCodeChange = (index, code) => {
+    const newSteps = [...formData.steps];
+    newSteps[index].code = code;
     setFormData(prev => ({
       ...prev,
-      steps: [...prev.steps, { title: '', description: '' }]
+      steps: newSteps
     }));
   };
 
-  const updateStep = (index, field, value) => {
+  const handleStepChange = (index, field, value) => {
     const newSteps = [...formData.steps];
-    newSteps[index] = { ...newSteps[index], [field]: value };
-    setFormData(prev => ({ ...prev, steps: newSteps }));
+    newSteps[index][field] = value;
+    setFormData(prev => ({
+      ...prev,
+      steps: newSteps
+    }));
+  };
+
+  const addStep = () => {
+    setFormData(prev => ({
+      ...prev,
+      steps: [...prev.steps, {
+        title: '',
+        description: '',
+        code: '',
+        hint: '',
+        tips: []
+      }]
+    }));
+  };
+
+  const removeStep = (index) => {
+    if (formData.steps.length > 1) {
+      const newSteps = formData.steps.filter((_, i) => i !== index);
+      setFormData(prev => ({
+        ...prev,
+        steps: newSteps
+      }));
+    }
   };
 
   return (
@@ -275,36 +310,149 @@ export function ProjectForm({ project = null, onComplete, categories, difficulty
 
             {/* Project Steps */}
             <div className="space-y-4">
-              <div className="flex justify-between items-center group">
-                <label className="block text-base font-medium text-slate-700 group-hover:text-blue-500 transition-colors">Project Steps</label>
+              <div className="flex justify-between items-center">
+                <h3 className="text-lg font-semibold text-slate-800">Project Steps</h3>
                 <button
                   type="button"
                   onClick={addStep}
-                  className="px-4 py-2 bg-blue-50 hover:bg-blue-100 text-blue-600 rounded-lg text-sm font-medium transition-all duration-200 hover:scale-105 active:scale-95"
+                  className="px-4 py-2 text-sm bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
                 >
                   Add Step
                 </button>
               </div>
-              <div className="grid grid-cols-1 gap-6">
-                {formData.steps.map((step, index) => (
-                  <div key={index} className="space-y-4 p-6 bg-slate-50 rounded-lg border border-slate-200 hover:border-blue-200 transition-all duration-200">
+
+              {formData.steps.map((step, index) => (
+                <div
+                  key={index}
+                  className="p-6 bg-white rounded-xl border border-slate-200 shadow-sm space-y-4"
+                >
+                  <div className="flex justify-between items-center">
+                    <h4 className="font-semibold text-slate-700">Step {index + 1}</h4>
+                    {formData.steps.length > 1 && (
+                      <button
+                        type="button"
+                        onClick={() => removeStep(index)}
+                        className="text-red-500 hover:text-red-600 transition-colors"
+                      >
+                        Remove
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Step Title */}
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-2">
+                      Step Title
+                    </label>
                     <input
                       type="text"
                       value={step.title}
-                      onChange={(e) => updateStep(index, 'title', e.target.value)}
-                      className="block w-full rounded-lg bg-white border-slate-200 px-4 py-3 focus:border-blue-500 focus:ring-blue-500/50 hover:border-blue-400 transition-all duration-200"
-                      placeholder="Step title"
-                    />
-                    <textarea
-                      value={step.description}
-                      onChange={(e) => updateStep(index, 'description', e.target.value)}
-                      className="block w-full rounded-lg bg-white border-slate-200 px-4 py-3 focus:border-blue-500 focus:ring-blue-500/50 hover:border-blue-400 transition-all duration-200"
-                      rows="3"
-                      placeholder="Step description"
+                      onChange={(e) => handleStepChange(index, 'title', e.target.value)}
+                      className="w-full px-4 py-2 rounded-lg border border-slate-300 focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                      placeholder="Enter step title"
                     />
                   </div>
-                ))}
-              </div>
+
+                  {/* Step Description */}
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-2">
+                      Step Description
+                    </label>
+                    <textarea
+                      value={step.description}
+                      onChange={(e) => handleStepChange(index, 'description', e.target.value)}
+                      className="w-full px-4 py-2 rounded-lg border border-slate-300 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 min-h-[100px]"
+                      placeholder="Enter step description"
+                    />
+                  </div>
+
+                  {/* Step Hint */}
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-2">
+                      Step Hint
+                    </label>
+                    <textarea
+                      value={step.hint}
+                      onChange={(e) => handleStepChange(index, 'hint', e.target.value)}
+                      className="w-full px-4 py-2 rounded-lg border border-slate-300 focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                      placeholder="Enter helpful hint for this step"
+                    />
+                    <p className="mt-1 text-sm text-slate-500">
+                      Provide a helpful hint that students can use if they get stuck on this step.
+                    </p>
+                  </div>
+
+                  {/* Step Tips */}
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-2">
+                      Pro Tips
+                    </label>
+                    <div className="space-y-2">
+                      {Array.isArray(step.tips) && step.tips.map((tip, tipIndex) => (
+                        <div key={tipIndex} className="flex gap-2">
+                          <input
+                            type="text"
+                            value={tip}
+                            onChange={(e) => {
+                              const newTips = [...step.tips];
+                              newTips[tipIndex] = e.target.value;
+                              handleStepChange(index, 'tips', newTips);
+                            }}
+                            className="flex-1 px-4 py-2 rounded-lg border border-slate-300 focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                            placeholder="Enter a pro tip"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const newTips = step.tips.filter((_, i) => i !== tipIndex);
+                              handleStepChange(index, 'tips', newTips);
+                            }}
+                            className="px-3 py-2 text-red-500 hover:text-red-600 transition-colors"
+                          >
+                            ×
+                          </button>
+                        </div>
+                      ))}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const newTips = Array.isArray(step.tips) ? [...step.tips, ''] : [''];
+                          handleStepChange(index, 'tips', newTips);
+                        }}
+                        className="text-sm text-blue-500 hover:text-blue-600 transition-colors"
+                      >
+                        + Add Pro Tip
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Step Code */}
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-2">
+                      Step Code
+                    </label>
+                    <div className="border border-slate-300 rounded-lg overflow-hidden">
+                      <Editor
+                        height="200px"
+                        defaultLanguage="javascript"
+                        theme="vs-dark"
+                        value={step.code}
+                        onChange={(value) => handleStepChange(index, 'code', value)}
+                        options={{
+                          minimap: { enabled: false },
+                          scrollBeyondLastLine: false,
+                          fontSize: 14,
+                          lineNumbers: 'on',
+                          wordWrap: 'on',
+                        }}
+                      />
+                    </div>
+                    <p className="mt-1 text-sm text-slate-500">
+                      Add the code implementation for this step (optional)
+                    </p>
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
         ) : (

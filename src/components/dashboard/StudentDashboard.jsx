@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { db, collection, getDocs, query, orderBy, doc, updateDoc } from '../../config/firebase';
+import { calculateProjectProgress } from '../../utils/progressCalculator';
 
 export function StudentDashboard() {
     const [error, setError] = useState('');
@@ -12,10 +13,12 @@ export function StudentDashboard() {
     const { currentUser, logout } = useAuth();
     const navigate = useNavigate();
     const [userName, setUserName] = useState('');
+    const [progress, setProgress] = useState({});
 
     useEffect(() => {
         fetchProjects();
         fetchUserName();
+        fetchProjectsAndProgress();
     }, []);
 
     const fetchUserName = async () => {
@@ -46,6 +49,32 @@ export function StudentDashboard() {
             setError('Failed to fetch projects: ' + err.message);
         } finally {
             setLoading(false);
+        }
+    };
+
+    const fetchProjectsAndProgress = async () => {
+        try {
+            // Fetch all projects
+            const projectsSnapshot = await getDocs(collection(db, 'projects'));
+            const projectsData = projectsSnapshot.docs.map(doc => ({
+                id: doc.id,
+                ...doc.data()
+            }));
+
+            // Fetch user's progress for all projects
+            const progressSnapshot = await getDocs(collection(db, 'users', currentUser.uid, 'progress'));
+            const progressData = {};
+            
+            progressSnapshot.docs.forEach(doc => {
+                const { completedSteps } = doc.data();
+                const project = projectsData.find(p => p.id === doc.id);
+                progressData[doc.id] = calculateProjectProgress(project, completedSteps);
+            });
+
+            setProjects(projectsData);
+            setProgress(progressData);
+        } catch (error) {
+            console.error('Error fetching data:', error);
         }
     };
 
@@ -152,7 +181,7 @@ export function StudentDashboard() {
                         {project.difficulty.charAt(0).toUpperCase() + project.difficulty.slice(1)}
                       </span>
                       <span className="text-sm text-slate-500">
-                        {project.progress ? `${project.progress}% Complete` : '0% Complete'}
+                        {progress[project.id] ? `${progress[project.id]}% Complete` : '0% Complete'}
                       </span>
                     </div>
 
