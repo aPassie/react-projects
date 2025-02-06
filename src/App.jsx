@@ -111,9 +111,7 @@ function App() {
   return (
     <AuthProvider>
       <BrowserRouter>
-        <ThemeProvider>
           <AppRoutes />
-        </ThemeProvider>
       </BrowserRouter>
     </AuthProvider>
   );
