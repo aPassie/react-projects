@@ -1,16 +1,26 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useNavigate } from 'react-router-dom';
 import { ThemeProvider } from './contexts/ThemeContext';
-import { AuthProvider } from './contexts/AuthContext';
+import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { Login } from './components/auth/Login';
 import { StudentDashboard } from './components/dashboard/StudentDashboard';
 import { AdminDashboard } from './components/dashboard/AdminDashboard';
 import { ProjectDetails } from './components/projects/ProjectDetails';
 import { NotFound } from './components/common/NotFound';
-import { useAuth } from './contexts/AuthContext';
+import { useEffect } from 'react';
 
 // Protected Route wrapper component
 function ProtectedRoute({ children, requireAdmin = false }) {
   const { currentUser, isAdmin, loading } = useAuth();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    if (!loading && !currentUser) {
+      navigate('/login');
+    }
+    if (!loading && requireAdmin && !isAdmin) {
+      navigate('/dashboard');
+    }
+  }, [loading, currentUser, isAdmin, requireAdmin, navigate]);
 
   if (loading) {
     return (
@@ -20,13 +30,8 @@ function ProtectedRoute({ children, requireAdmin = false }) {
     );
   }
 
-  if (!currentUser) {
-    return <Navigate to="/login" />;
-  }
-
-  if (requireAdmin && !isAdmin) {
-    return <Navigate to="/dashboard" />;
-  }
+  if (!currentUser) return null;
+  if (requireAdmin && !isAdmin) return null;
 
   return children;
 }
@@ -47,7 +52,11 @@ function AppRoutes() {
       {/* Public Routes */}
       <Route 
         path="/login" 
-        element={currentUser ? <Navigate to={isAdmin ? "/admin" : "/dashboard"} /> : <Login />} 
+        element={
+          currentUser 
+            ? <Navigate to={isAdmin ? "/admin" : "/dashboard"} replace /> 
+            : <Login />
+        } 
       />
 
       {/* Protected Routes */}
@@ -55,7 +64,7 @@ function AppRoutes() {
         path="/dashboard" 
         element={
           <ProtectedRoute>
-            <StudentDashboard />
+            {isAdmin ? <Navigate to="/admin" replace /> : <StudentDashboard />}
           </ProtectedRoute>
         } 
       />
@@ -80,13 +89,15 @@ function AppRoutes() {
       <Route 
         path="/" 
         element={
-          <Navigate to={
-            !currentUser 
-              ? "/login" 
-              : isAdmin 
-                ? "/admin" 
-                : "/dashboard"
-          } 
+          <Navigate 
+            to={
+              !currentUser 
+                ? "/login" 
+                : isAdmin 
+                  ? "/admin" 
+                  : "/dashboard"
+            } 
+            replace
           />
         } 
       />

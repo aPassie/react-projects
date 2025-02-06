@@ -15,9 +15,12 @@ const AuthContext = createContext();
 
 // List of admin emails
 const ADMIN_EMAILS = [
-  'cloud1byps@gmail.com',  // Replace with your admin email
+  'cloud1byps@gmail.com',
+  'megamohit2006@gmail.com',
+  'd2055960@gmail.com',
   // Add more admin emails as needed
 ];
+
 
 export function useAuth() {
   return useContext(AuthContext);
@@ -35,26 +38,39 @@ export function AuthProvider({ children }) {
       
       // Check if user is admin
       const isUserAdmin = ADMIN_EMAILS.includes(result.user.email);
+      console.log('Is user admin:', isUserAdmin, 'Email:', result.user.email); // Debug log
       
       // Create or update user document in Firestore
       const userRef = doc(db, 'users', result.user.uid);
       const userSnap = await getDoc(userRef);
       
+      const userData = {
+        email: result.user.email,
+        displayName: result.user.displayName,
+        photoURL: result.user.photoURL,
+        isAdmin: isUserAdmin,
+        updatedAt: new Date().toISOString(),
+      };
+
       if (!userSnap.exists()) {
+        // New user - set all fields
         await setDoc(userRef, {
-          email: result.user.email,
-          displayName: result.user.displayName,
-          photoURL: result.user.photoURL,
+          ...userData,
           createdAt: new Date().toISOString(),
-          isAdmin: isUserAdmin,
           completedProjects: [],
           projectProgress: {},
           points: 0,
           badges: []
         });
+      } else {
+        // Existing user - update fields
+        await setDoc(userRef, userData, { merge: true });
       }
 
+      // Set admin status in state
       setIsAdmin(isUserAdmin);
+      console.log('Admin status set to:', isUserAdmin); // Debug log
+      
       return result;
     } catch (error) {
       console.error('Sign in error:', error);
@@ -76,16 +92,37 @@ export function AuthProvider({ children }) {
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
+        // Check if user is admin
         const isUserAdmin = ADMIN_EMAILS.includes(user.email);
-        setIsAdmin(isUserAdmin);
+        console.log('Auth state changed - Is admin:', isUserAdmin, 'Email:', user.email); // Debug log
         
-        // Get user data from Firestore
-        const userRef = doc(db, 'users', user.uid);
-        const userSnap = await getDoc(userRef);
-        if (userSnap.exists()) {
-          setCurrentUser({ ...user, ...userSnap.data() });
-        } else {
-          setCurrentUser(user);
+        try {
+          // Get user data from Firestore
+          const userRef = doc(db, 'users', user.uid);
+          const userSnap = await getDoc(userRef);
+          
+          if (userSnap.exists()) {
+            const userData = userSnap.data();
+            // Always use the current admin status based on email
+            const updatedUser = {
+              ...user,
+              ...userData,
+              isAdmin: isUserAdmin
+            };
+            
+            // Update Firestore if admin status changed
+            if (userData.isAdmin !== isUserAdmin) {
+              await setDoc(userRef, { isAdmin: isUserAdmin }, { merge: true });
+            }
+            
+            setCurrentUser(updatedUser);
+          } else {
+            setCurrentUser({ ...user, isAdmin: isUserAdmin });
+          }
+          
+          setIsAdmin(isUserAdmin);
+        } catch (error) {
+          console.error('Error fetching user data:', error);
         }
       } else {
         setCurrentUser(null);

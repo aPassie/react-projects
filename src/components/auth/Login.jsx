@@ -13,15 +13,20 @@ export function Login() {
     try {
       setError('');
       setLoading(true);
-      const result = await signInWithGoogle();
-      console.log('Sign in successful:', result);
+      const { user } = await signInWithGoogle();
       
-      // Check if user is admin
-      if (result.user.email === 'cloud1byps@gmail.com') {
-        navigate('/admin');
-      } else {
-        navigate('/dashboard');
-      }
+      // Check admin status directly from email
+      const isAdmin = ['cloud1byps@gmail.com', 'parthshukla2112003@gmail.com', 'shuklaparth2003@gmail.com'].includes(user.email);
+      
+      // Wait a bit before navigation to ensure Firestore update is complete
+      setTimeout(() => {
+        if (isAdmin) {
+          navigate('/admin');
+        } else {
+          navigate('/dashboard');
+        }
+      }, 500);
+      
     } catch (error) {
       console.error('Sign in error:', error);
       setError('Failed to sign in with Google: ' + error.message);
