@@ -32,10 +32,33 @@ export default {
               opacity: '1',
               transform: 'translateY(0)'
             },
-          }
+          },
+          float: {
+            '0%, 100%': { transform: 'translateY(0)' },
+            '50%': { transform: 'translateY(-10px)' },
+          },
+          blob: {
+            '0%': {
+              transform: 'translate(0px, 0px) scale(1)',
+            },
+            '25%': {
+              transform: 'translate(50px, -50px) scale(1.2)',
+            },
+            '50%': {
+              transform: 'translate(0px, 50px) scale(0.9)',
+            },
+            '75%': {
+              transform: 'translate(-50px, -25px) scale(1.1)',
+            },
+            '100%': {
+              transform: 'translate(0px, 0px) scale(1)',
+            },
+          },
         },
         animation: {
           'fade-in': 'fade-in 0.2s ease-out',
+          float: 'float 6s ease-in-out infinite',
+          blob: 'blob 15s infinite cubic-bezier(0.4, 0, 0.2, 1)',
         },
         typography: (theme) => ({
           invert: {

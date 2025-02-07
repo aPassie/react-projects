@@ -59,54 +59,49 @@ function AppRoutes() {
         } 
       />
 
-      {/* Protected Routes */}
-      <Route 
-        path="/dashboard" 
+      {/* Protected Student Routes */}
+      <Route
+        path="/dashboard"
         element={
           <ProtectedRoute>
-            {isAdmin ? <Navigate to="/admin" replace /> : <StudentDashboard />}
+            <StudentDashboard />
           </ProtectedRoute>
-        } 
+        }
       />
-      <Route 
-        path="/admin" 
-        element={
-          <ProtectedRoute requireAdmin>
-            <AdminDashboard />
-          </ProtectedRoute>
-        } 
-      />
-      <Route 
-        path="/projects/:projectId" 
-        element={
-          <ProtectedRoute>
-            <ProjectDetails />
-          </ProtectedRoute>
-        } 
-      />
-      <Route 
-        path="/leaderboard" 
+      <Route
+        path="/leaderboard"
         element={
           <ProtectedRoute>
             <LeaderboardPage />
           </ProtectedRoute>
-        } 
+        }
+      />
+      <Route
+        path="/project/:projectId"
+        element={
+          <ProtectedRoute>
+            <ProjectDetails />
+          </ProtectedRoute>
+        }
       />
 
-      {/* Root Route */}
+      {/* Admin Routes */}
+      <Route
+        path="/admin/*"
+        element={
+          <ProtectedRoute requireAdmin>
+            <AdminDashboard />
+          </ProtectedRoute>
+        }
+      />
+
+      {/* Default Route */}
       <Route 
         path="/" 
         element={
-          <Navigate 
-            to={
-              !currentUser 
-                ? "/login" 
-                : isAdmin 
-                  ? "/admin" 
-                  : "/dashboard"
-            } 
-            replace
-          />
+          currentUser 
+            ? <Navigate to={isAdmin ? "/admin" : "/dashboard"} replace />
+            : <Navigate to="/login" replace />
         } 
       />
 
@@ -116,14 +111,12 @@ function AppRoutes() {
   );
 }
 
-function App() {
+export default function App() {
   return (
-    <AuthProvider>
-      <BrowserRouter>
-          <AppRoutes />
-      </BrowserRouter>
-    </AuthProvider>
+    <BrowserRouter>
+      <AuthProvider>
+        <AppRoutes />
+      </AuthProvider>
+    </BrowserRouter>
   );
 }
-
-export default App;
