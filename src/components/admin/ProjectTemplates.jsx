@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { db, collection, getDocs, addDoc, query, where } from '../../config/firebase';
+import { projectTemplates } from '../../templates/projectTemplates';
 
 export function ProjectTemplates({ onUseTemplate }) {
   const [templates, setTemplates] = useState([]);
@@ -7,40 +7,62 @@ export function ProjectTemplates({ onUseTemplate }) {
   const [error, setError] = useState('');
 
   useEffect(() => {
-    fetchTemplates();
+    initializeTemplates();
   }, []);
 
-  const fetchTemplates = async () => {
+  const initializeTemplates = async () => {
     try {
-      const templatesQuery = query(collection(db, 'projectTemplates'));
-      const snapshot = await getDocs(templatesQuery);
-      const templatesData = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      }));
-      setTemplates(templatesData);
+      setLoading(true);
+      // Use the predefined templates directly
+      setTemplates(projectTemplates.map((template, index) => ({
+        ...template,
+        id: `template-${index}`,
+      })));
     } catch (err) {
-      setError('Failed to fetch templates: ' + err.message);
+      setError('Failed to initialize templates: ' + err.message);
     } finally {
       setLoading(false);
     }
   };
 
-  const saveAsTemplate = async (project) => {
+  const handleUseTemplate = (template) => {
     try {
-      await addDoc(collection(db, 'projectTemplates'), {
-        ...project,
-        isTemplate: true,
-        createdAt: new Date().toISOString()
-      });
-      await fetchTemplates();
+      // Create project data from template, ensuring all fields are properly initialized
+      const projectData = {
+        title: '',  // Leave empty for user to fill
+        description: '',  // Leave empty for user to fill
+        difficulty: template.difficulty || 'beginner',
+        category: template.category || 'frontend',
+        estimatedHours: template.estimatedHours || 0,
+        tags: [], // Initialize as empty array, will be filled by user
+        steps: template.steps || [],
+        prerequisites: [],
+        learningObjectives: [],
+        resources: [],
+        content: {
+          description: '',
+          codeSnippets: {},
+          images: [],
+          videos: [],
+          resources: []
+        },
+        status: 'draft'
+      };
+
+      // Pass the project data to parent
+      onUseTemplate(projectData);
     } catch (err) {
-      setError('Failed to save template: ' + err.message);
+      setError('Failed to use template: ' + err.message);
     }
   };
 
   if (loading) {
-    return <div className="text-center py-8">Loading templates...</div>;
+    return (
+      <div className="flex items-center justify-center py-8">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+        <span className="ml-3 text-gray-600">Loading templates...</span>
+      </div>
+    );
   }
 
   return (
@@ -55,29 +77,18 @@ export function ProjectTemplates({ onUseTemplate }) {
         </div>
       )}
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {templates.map(template => (
           <div
             key={template.id}
-            className="bg-white p-6 rounded-lg border border-slate-200 shadow-sm hover:shadow-md transition-all duration-200 space-y-4"
+            className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm hover:shadow-md transition-all duration-200 space-y-4"
           >
             <div>
-              <h3 className="text-lg font-medium text-slate-800">{template.title}</h3>
-              <p className="text-slate-600 text-sm mt-1">{template.description}</p>
+              <h3 className="text-xl font-semibold text-slate-800 mb-2">{template.title}</h3>
+              <p className="text-slate-600">{template.description}</p>
             </div>
 
-            <div className="flex flex-wrap gap-2">
-              {template.tags?.map(tag => (
-                <span
-                  key={tag}
-                  className="px-3 py-1 bg-slate-100 text-slate-700 rounded-full text-sm font-medium"
-                >
-                  {tag}
-                </span>
-              ))}
-            </div>
-
-            <div className="flex items-center justify-between pt-4">
+            <div className="flex items-center gap-3">
               <span className={`px-3 py-1 rounded-full text-sm font-medium ${
                 template.difficulty === 'beginner' ? 'bg-green-100 text-green-800' :
                 template.difficulty === 'intermediate' ? 'bg-yellow-100 text-yellow-800' :
@@ -85,19 +96,39 @@ export function ProjectTemplates({ onUseTemplate }) {
               }`}>
                 {template.difficulty.charAt(0).toUpperCase() + template.difficulty.slice(1)}
               </span>
+              <span className="px-3 py-1 bg-slate-100 text-slate-600 rounded-full text-sm">
+                {template.estimatedHours} hours
+              </span>
+            </div>
+
+            <div className="flex flex-wrap gap-2">
+              {template.tags?.map(tag => (
+                <span
+                  key={tag}
+                  className="px-3 py-1 bg-blue-50 text-blue-600 rounded-full text-sm font-medium"
+                >
+                  {tag}
+                </span>
+              ))}
+            </div>
+
+            <div className="pt-4">
               <button
-                onClick={() => onUseTemplate(template)}
-                className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-full transition-colors duration-200 active:scale-95"
+                onClick={() => handleUseTemplate(template)}
+                className="w-full px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors duration-200 active:scale-95 flex items-center justify-center gap-2"
               >
-                Use Template
+                <span>Use Template</span>
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" />
+                </svg>
               </button>
             </div>
           </div>
         ))}
 
         {templates.length === 0 && (
-          <div className="col-span-3 text-center py-8 text-slate-500">
-            No templates available.
+          <div className="col-span-2 text-center py-12 bg-slate-50 rounded-xl border border-slate-200">
+            <div className="text-slate-500">No templates available.</div>
           </div>
         )}
       </div>

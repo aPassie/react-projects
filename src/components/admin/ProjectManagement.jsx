@@ -79,8 +79,12 @@ export function ProjectManagement() {
 
         {activeView === 'templates' && (
           <ProjectTemplates
-            onUseTemplate={(template) => {
-              setSelectedProject(template);
+            onUseTemplate={(newProject) => {
+              // Create a new project without any existing ID
+              setSelectedProject({
+                ...newProject,
+                id: null // Ensure we're creating a new project
+              });
               setActiveView('form');
             }}
           />

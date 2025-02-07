@@ -20,7 +20,7 @@ export function ProjectForm({ project = null, onComplete, categories, difficulty
       tips: []
     }],
     resources: project?.resources || [],
-    tags: project?.tags?.join(', ') || '',
+    tags: '', // Initialize as empty string, will be filled by user
     content: project?.content || {
       description: '',
       codeSnippets: {},
@@ -41,13 +41,13 @@ export function ProjectForm({ project = null, onComplete, categories, difficulty
     try {
       const projectData = {
         ...formData,
-        tags: formData.tags.split(',').map(tag => tag.trim()).filter(Boolean),
-        prerequisites: formData.prerequisites.filter(p => p.trim()),
-        learningObjectives: formData.learningObjectives.filter(o => o.trim()),
+        tags: formData.tags ? formData.tags.split(',').map(tag => tag.trim()).filter(Boolean) : [],
+        prerequisites: formData.prerequisites.filter(p => p && p.trim()),
+        learningObjectives: formData.learningObjectives.filter(o => o && o.trim()),
         updatedAt: new Date().toISOString()
       };
 
-      if (project) {
+      if (project?.id) {
         await updateDoc(doc(db, 'projects', project.id), projectData);
       } else {
         await addDoc(collection(db, 'projects'), {
@@ -475,7 +475,7 @@ export function ProjectForm({ project = null, onComplete, categories, difficulty
             disabled={loading}
             className="px-6 py-3 bg-blue-500 hover:bg-blue-600 text-white rounded-lg font-medium transition-all duration-200 hover:scale-105 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {loading ? 'Saving...' : project ? 'Update Project' : 'Create Project'}
+            {loading ? 'Saving...' : (project?.id ? 'Update Project' : 'Create Project')}
           </button>
         </div>
       </form>
