@@ -191,11 +191,8 @@ export function ProjectDetails() {
   // Loading state
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-100 text-gray-900 flex items-center justify-center">
-        <div className="space-y-4 text-center">
-          <div className="w-16 h-16 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto"></div>
-          <p className="text-gray-600">Loading project...</p>
-        </div>
+      <div className="min-h-screen bg-black text-white flex items-center justify-center">
+        <div className="w-8 h-8 border-t-2 border-cyan-500 rounded-full animate-spin"></div>
       </div>
     );
   }
@@ -203,13 +200,13 @@ export function ProjectDetails() {
   // Error state
   if (error) {
     return (
-      <div className="min-h-screen bg-gray-100 text-gray-900 flex items-center justify-center">
-        <div className="bg-white border border-red-500/50 rounded-2xl p-6 max-w-md mx-auto">
-          <h2 className="text-xl font-bold text-red-500 mb-2">Error</h2>
-          <p className="text-gray-700">{error}</p>
+      <div className="min-h-screen bg-black text-white flex items-center justify-center">
+        <div className="bg-neutral-900/50 backdrop-blur-sm border border-neutral-800 rounded-xl p-6 max-w-md mx-auto">
+          <h2 className="text-xl font-bold text-red-400 mb-2">Error</h2>
+          <p className="text-neutral-300">{error}</p>
           <button
             onClick={() => navigate('/dashboard')}
-            className="mt-4 px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition-colors"
+            className="mt-4 px-4 py-2 bg-neutral-800 text-white rounded-lg hover:bg-neutral-700 transition-colors"
           >
             Back to Dashboard
           </button>
@@ -221,13 +218,13 @@ export function ProjectDetails() {
   // Project not found state
   if (!project || !project.steps || project.steps.length === 0) {
     return (
-      <div className="min-h-screen bg-gray-100 text-gray-900 flex items-center justify-center">
-        <div className="bg-white border border-gray-300 rounded-2xl p-6 max-w-md mx-auto">
+      <div className="min-h-screen bg-black text-white flex items-center justify-center">
+        <div className="bg-neutral-900/50 backdrop-blur-sm border border-neutral-800 rounded-xl p-6 max-w-md mx-auto">
           <h2 className="text-xl font-bold mb-2">Project Not Found</h2>
-          <p className="text-gray-700">The requested project could not be found or has no steps.</p>
+          <p className="text-neutral-300">The requested project could not be found or has no steps.</p>
           <button
             onClick={() => navigate('/dashboard')}
-            className="mt-4 px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition-colors"
+            className="mt-4 px-4 py-2 bg-neutral-800 text-white rounded-lg hover:bg-neutral-700 transition-colors"
           >
             Back to Dashboard
           </button>
@@ -241,43 +238,76 @@ export function ProjectDetails() {
   const currentStepData = project.steps[safeCurrentStep];
 
   return (
-    <div className="min-h-screen bg-gray-100 text-gray-900">
+    <div className="min-h-screen bg-black text-white relative overflow-hidden">
+      {/* Animated Background */}
+      <div className="fixed inset-0 z-0">
+        {/* Gradient Orbs */}
+        <div className="absolute top-0 -left-4 w-96 h-96 bg-blue-600/20 rounded-full mix-blend-multiply filter blur-xl opacity-10 animate-blob" />
+        <div className="absolute top-0 -right-4 w-96 h-96 bg-cyan-600/20 rounded-full mix-blend-multiply filter blur-xl opacity-10 animate-blob animation-delay-2000" />
+        <div className="absolute -bottom-8 left-20 w-96 h-96 bg-purple-600/20 rounded-full mix-blend-multiply filter blur-xl opacity-10 animate-blob animation-delay-4000" />
+        <div className="absolute bottom-20 right-20 w-96 h-96 bg-blue-600/20 rounded-full mix-blend-multiply filter blur-xl opacity-10 animate-blob animation-delay-6000" />
+        
+        {/* Stars */}
+        <div className="stars-container">
+          {[...Array(100)].map((_, i) => (
+            <div 
+              key={i} 
+              className="star"
+              style={{
+                left: `${Math.random() * 100}%`,
+                top: `${Math.random() * 100}%`,
+                animationDelay: `${Math.random() * 8}s`,
+                width: `${Math.random() * 3 + 1}px`,
+                height: `${Math.random() * 3 + 1}px`,
+                opacity: Math.random() * 0.3 + 0.2
+              }}
+            />
+          ))}
+        </div>
+
+        {/* Gradient Mesh */}
+        <div className="absolute inset-0 bg-gradient-to-b from-black/80 via-black/50 to-black/80" />
+      </div>
+
       {/* Header */}
-      <header className="border-b border-gray-300 bg-white sticky top-0 z-20">
-        <div className="container mx-auto px-4 py-4 flex justify-between items-center">
-          <button
-            onClick={() => navigate('/dashboard')}
-            className="flex items-center text-blue-500 hover:text-blue-600 transition-all duration-200 group"
-          >
-            <IoMdArrowBack className="mr-2 transform group-hover:-translate-x-1 transition-transform duration-200" />
-            Back to Projects
-          </button>
-          <div className="flex items-center gap-3">
-            <span className="text-gray-600">Progress:</span>
-            <div className="w-32 h-2 bg-gray-200 rounded-full overflow-hidden">
-              <div
-                className={`h-full rounded-full transition-all duration-300 ease-out ${
-                  progress === 100 ? 'bg-green-500' : 'bg-blue-500'
-                }`}
-                style={{ width: `${progress}%` }}
-              />
+      <header className="sticky top-0 z-20 bg-transparent">
+        <div className="absolute inset-x-0 top-0 h-24 bg-gradient-to-b from-black/80 to-transparent" />
+        <div className="container mx-auto px-4 py-4 relative">
+          <div className="flex justify-between items-center backdrop-blur-sm bg-black/20 rounded-xl p-4">
+            <button
+              onClick={() => navigate('/dashboard')}
+              className="flex items-center text-neutral-400 hover:text-cyan-400 transition-all duration-200 group"
+            >
+              <IoMdArrowBack className="mr-2 transform group-hover:-translate-x-1 transition-transform duration-200" />
+              Back to Projects
+            </button>
+            <div className="flex items-center gap-3">
+              <span className="text-neutral-400">Progress:</span>
+              <div className="w-32 h-2 bg-neutral-800 rounded-full overflow-hidden">
+                <div
+                  className={`h-full rounded-full transition-all duration-300 ease-out ${
+                    progress === 100 ? 'bg-green-500' : 'bg-cyan-500'
+                  }`}
+                  style={{ width: `${progress}%` }}
+                />
+              </div>
+              <span className={`${progress === 100 ? 'text-green-400 font-semibold' : 'text-neutral-400'}`}>
+                {progress}%
+              </span>
             </div>
-            <span className={`${progress === 100 ? 'text-green-600 font-semibold' : 'text-gray-600'}`}>
-              {progress}%
-            </span>
           </div>
         </div>
       </header>
 
-      <div className="container mx-auto p-6 space-y-8">
+      <div className="container mx-auto p-6 space-y-8 relative z-10">
         {/* Project Overview */}
-        <div className="bg-white border border-gray-300 rounded-2xl p-6 space-y-6 hover:border-gray-400 transition-colors duration-300">
+        <div className="bg-neutral-900/50 backdrop-blur-sm border border-neutral-800 rounded-xl p-6 space-y-6 hover:border-neutral-700 transition-colors duration-300">
           <div className="flex justify-between items-start">
             <div>
-              <h1 className="text-3xl font-bold mb-3 text-gray-900">
+              <h1 className="text-3xl font-bold mb-3 bg-gradient-to-r from-cyan-400 via-blue-400 to-purple-400 bg-clip-text text-transparent">
                 {project.title}
               </h1>
-              <div className="flex items-center gap-4 text-sm text-gray-600">
+              <div className="flex items-center gap-4 text-sm text-neutral-400">
                 <div className="flex items-center gap-1">
                   <IoMdTime className="w-4 h-4" />
                   <span>{project.estimatedHours} hours</span>
@@ -290,7 +320,7 @@ export function ProjectDetails() {
             </div>
           </div>
 
-          <p className="text-gray-700 leading-relaxed">{project.description}</p>
+          <p className="text-neutral-300 leading-relaxed">{project.description}</p>
 
           {/* Tags */}
           {project.tags && project.tags.length > 0 && (
@@ -298,7 +328,7 @@ export function ProjectDetails() {
               {project.tags.map((tag, index) => (
                 <span
                   key={index}
-                  className="px-3 py-1 bg-blue-100 text-blue-600 rounded-full text-sm hover:bg-blue-200 transition-colors duration-200"
+                  className="px-3 py-1 bg-cyan-500/10 text-cyan-400 rounded-full text-sm hover:bg-cyan-500/20 transition-colors duration-200"
                 >
                   {tag}
                 </span>
@@ -310,8 +340,8 @@ export function ProjectDetails() {
         {/* Steps and Content Grid */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
           {/* Steps Sidebar */}
-          <div className="bg-white border border-gray-300 rounded-2xl p-6 hover:border-gray-400 transition-colors duration-300">
-            <h2 className="text-xl font-bold mb-4 text-gray-900">
+          <div className="bg-neutral-900/50 backdrop-blur-sm border border-neutral-800 rounded-xl p-6 hover:border-neutral-700 transition-colors duration-300">
+            <h2 className="text-xl font-bold mb-4 text-white">
               Project Steps
             </h2>
             <div className="space-y-2">
@@ -322,22 +352,22 @@ export function ProjectDetails() {
                   disabled={!isStepAccessible(index)}
                   className={`flex items-center gap-3 w-full px-4 py-3 rounded-xl text-left transition-all duration-200
                     ${index === currentStep
-                      ? 'bg-blue-500 text-white shadow-lg shadow-blue-500/20'
+                      ? 'bg-cyan-500/20 text-cyan-400 shadow-lg shadow-cyan-500/20'
                       : completedSteps.includes(index)
-                        ? 'bg-green-100 text-green-600 hover:bg-green-200'
+                        ? 'bg-green-500/10 text-green-400 hover:bg-green-500/20'
                         : !isStepAccessible(index)
-                          ? 'bg-gray-200 text-gray-600 cursor-not-allowed opacity-60'
-                          : 'bg-gray-200 text-gray-600 hover:bg-gray-300'
+                          ? 'bg-neutral-800/50 text-neutral-600 cursor-not-allowed opacity-60'
+                          : 'bg-neutral-800/50 text-neutral-400 hover:bg-neutral-700/50'
                     }
                     transform hover:scale-[1.02] hover:-translate-y-0.5
                   `}
                 >
                   <div className={`w-8 h-8 flex-shrink-0 flex items-center justify-center rounded-full border
                     ${index === currentStep
-                      ? 'border-white/30'
+                      ? 'border-cyan-500/30'
                       : completedSteps.includes(index)
                         ? 'border-green-500/30'
-                        : 'border-gray-400'
+                        : 'border-neutral-700'
                     }`}
                   >
                     {completedSteps.includes(index) ? (
@@ -354,11 +384,11 @@ export function ProjectDetails() {
 
           {/* Step Content */}
           <div className="md:col-span-2">
-            <div className="bg-white border border-gray-300 rounded-2xl p-6 hover:border-gray-400 transition-colors duration-300">
+            <div className="bg-neutral-900/50 backdrop-blur-sm border border-neutral-800 rounded-xl p-6 hover:border-neutral-700 transition-colors duration-300">
               <div className="space-y-6">
                 {/* Step Title with Hint and Tips Buttons */}
                 <div className="flex items-center justify-between">
-                  <h1 className="text-2xl font-bold text-gray-900">
+                  <h1 className="text-2xl font-bold text-white">
                     {project.steps[safeCurrentStep].title}
                   </h1>
                   <div className="relative flex items-center gap-2">
@@ -368,17 +398,17 @@ export function ProjectDetails() {
                         setShowTips(!showTips);
                         setShowHint(false);
                       }}
-                      className="p-2 rounded-full hover:bg-blue-100 transition-colors group"
+                      className="p-2 rounded-full hover:bg-cyan-500/10 transition-colors group"
                       title="Show Tips"
                     >
-                      <IoMdInformation className="w-6 h-6 text-blue-500 group-hover:text-blue-600" />
+                      <IoMdInformation className="w-6 h-6 text-cyan-400 group-hover:text-cyan-300" />
                     </button>
 
                     {/* Tips Popup */}
                     {showTips && project.steps[safeCurrentStep].tips?.length > 0 && (
-                      <div className="absolute right-0 top-full mt-2 w-72 p-4 bg-gray-100 rounded-lg shadow-xl z-10 animate-fade-in border border-gray-300">
+                      <div className="absolute right-0 top-full mt-2 w-72 p-4 bg-neutral-900/90 backdrop-blur-sm rounded-xl shadow-xl z-10 animate-fade-in border border-neutral-800">
                         <div className="flex justify-between items-start gap-2">
-                          <div className="flex items-center gap-2 text-blue-500">
+                          <div className="flex items-center gap-2 text-cyan-400">
                             <IoMdInformation className="w-5 h-5 flex-shrink-0" />
                             <span className="font-semibold">Pro Tips</span>
                           </div>
@@ -387,16 +417,16 @@ export function ProjectDetails() {
                               e.stopPropagation();
                               setShowTips(false);
                             }}
-                            className="text-gray-600 hover:text-gray-900 transition-colors text-xl leading-none"
+                            className="text-neutral-400 hover:text-white transition-colors text-xl leading-none"
                           >
                             ×
                           </button>
                         </div>
                         <div className="mt-2">
-                          <ul className="space-y-2 text-sm text-gray-800">
+                          <ul className="space-y-2 text-sm text-neutral-300">
                             {project.steps[safeCurrentStep].tips.map((tip, index) => (
                               <li key={index} className="flex items-start gap-2">
-                                <span className="text-blue-500 mt-1">•</span>
+                                <span className="text-cyan-400 mt-1">•</span>
                                 <span>{tip}</span>
                               </li>
                             ))}
@@ -411,17 +441,17 @@ export function ProjectDetails() {
                         setShowHint(!showHint);
                         setShowTips(false);
                       }}
-                      className="p-2 rounded-full hover:bg-yellow-100 transition-colors group"
+                      className="p-2 rounded-full hover:bg-yellow-500/10 transition-colors group"
                       title="Show Hint"
                     >
-                      <IoMdBulb className="w-6 h-6 text-yellow-500 group-hover:text-yellow-600" />
+                      <IoMdBulb className="w-6 h-6 text-yellow-400 group-hover:text-yellow-300" />
                     </button>
 
                     {/* Hint Popup */}
                     {showHint && (
-                      <div className="absolute right-0 top-full mt-2 w-72 p-4 bg-gray-100 rounded-lg shadow-xl z-10 animate-fade-in border border-gray-300">
+                      <div className="absolute right-0 top-full mt-2 w-72 p-4 bg-neutral-900/90 backdrop-blur-sm rounded-xl shadow-xl z-10 animate-fade-in border border-neutral-800">
                         <div className="flex justify-between items-start gap-2">
-                          <div className="flex items-center gap-2 text-yellow-500">
+                          <div className="flex items-center gap-2 text-yellow-400">
                             <IoMdBulb className="w-5 h-5 flex-shrink-0" />
                             <span className="font-semibold">Hint</span>
                           </div>
@@ -430,12 +460,12 @@ export function ProjectDetails() {
                               e.stopPropagation();
                               setShowHint(false);
                             }}
-                            className="text-gray-600 hover:text-gray-900 transition-colors text-xl leading-none"
+                            className="text-neutral-400 hover:text-white transition-colors text-xl leading-none"
                           >
                             ×
                           </button>
                         </div>
-                        <div className="mt-2 text-sm text-gray-800">
+                        <div className="mt-2 text-sm text-neutral-300">
                           {project.steps[safeCurrentStep].hint || "Try breaking down the problem into smaller steps. If you're stuck, review the previous steps or check the project resources."}
                         </div>
                       </div>
@@ -445,16 +475,16 @@ export function ProjectDetails() {
 
                 {/* Step Description */}
                 <div className="prose max-w-none">
-                  <p className="text-gray-700 leading-relaxed">{project.steps[safeCurrentStep].description}</p>
+                  <p className="text-neutral-300 leading-relaxed">{project.steps[safeCurrentStep].description}</p>
                 </div>
 
                 {/* Implementation Section */}
                 {project.steps[safeCurrentStep].code && (
                   <div className="space-y-4">
-                    <h3 className="text-xl font-bold text-gray-900">
+                    <h3 className="text-xl font-bold text-white">
                       Implementation
                     </h3>
-                    <div className="rounded-xl overflow-hidden border border-gray-300">
+                    <div className="rounded-xl overflow-hidden border border-neutral-800">
                       <CodeBlock
                         code={project.steps[safeCurrentStep].code}
                         language="javascript"
@@ -464,13 +494,13 @@ export function ProjectDetails() {
                 )}
 
                 {/* Navigation Buttons */}
-                <div className="flex justify-between items-center pt-6 border-t border-gray-300">
+                <div className="flex justify-between items-center pt-6 border-t border-neutral-800">
                   <button
                     onClick={handlePreviousStep}
                     className={`px-6 py-2 rounded-xl transition-all duration-200 transform hover:scale-105
                       ${currentStep === 0
-                        ? 'bg-gray-200 text-gray-600 cursor-not-allowed'
-                        : 'bg-gray-200 text-gray-800 hover:bg-gray-300'
+                        ? 'bg-neutral-800 text-neutral-600 cursor-not-allowed'
+                        : 'bg-neutral-800 text-neutral-300 hover:bg-neutral-700'
                       }`}
                     disabled={currentStep === 0}
                   >
@@ -481,9 +511,9 @@ export function ProjectDetails() {
                     disabled={progress === 100 && currentStep === project.steps.length - 1}
                     className={`px-6 py-2 rounded-xl transition-all duration-200 transform hover:scale-105
                       ${progress === 100
-                        ? 'bg-green-500 hover:bg-green-600'
-                        : 'bg-blue-500 hover:bg-blue-600'
-                      } text-white shadow-lg ${progress === 100 && currentStep === project.steps.length - 1 ? 'opacity-50 cursor-not-allowed' : ''}`}
+                        ? 'bg-green-500/20 text-green-400 hover:bg-green-500/30'
+                        : 'bg-cyan-500/20 text-cyan-400 hover:bg-cyan-500/30'
+                      } shadow-lg ${progress === 100 && currentStep === project.steps.length - 1 ? 'opacity-50 cursor-not-allowed' : ''}`}
                   >
                     {progress === 100 ? 'Project Completed' : currentStep === project.steps.length - 1 ? 'Complete Project' : 'Next Step'}
                   </button>

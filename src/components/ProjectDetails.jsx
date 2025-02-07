@@ -86,9 +86,9 @@ export function ProjectDetails() {
                         <div className="px-4 py-6 backdrop-blur-sm bg-black/20">
                             <Link 
                                 to="/dashboard"
-                                className="inline-flex items-center gap-2 text-neutral-400 hover:text-cyan-400 transition-colors duration-300"
+                                className="inline-flex items-center gap-2 text-neutral-400 hover:text-cyan-400 transition-colors duration-300 group"
                             >
-                                <IoMdArrowBack className="w-5 h-5" />
+                                <IoMdArrowBack className="w-5 h-5 transition-transform duration-300 group-hover:-translate-x-1" />
                                 Back to Dashboard
                             </Link>
                         </div>
@@ -115,11 +115,11 @@ export function ProjectDetails() {
                                 }`}>
                                     {project.difficulty}
                                 </span>
-                                <div className="flex items-center gap-2">
+                                <div className="flex items-center gap-2 hover:text-cyan-400 transition-colors duration-300">
                                     <IoMdTime className="w-5 h-5" />
                                     <span>{project.estimatedTime} hours</span>
                                 </div>
-                                <div className="flex items-center gap-2">
+                                <div className="flex items-center gap-2 hover:text-cyan-400 transition-colors duration-300">
                                     <IoMdCode className="w-5 h-5" />
                                     <span>{project.techStack?.join(', ')}</span>
                                 </div>
@@ -128,16 +128,16 @@ export function ProjectDetails() {
 
                         {/* Project Description */}
                         <div className="mb-8">
-                            <h2 className="text-xl font-semibold mb-4 text-white">Description</h2>
-                            <p className="text-neutral-300 leading-relaxed">{project.description}</p>
+                            <h2 className="text-xl font-semibold mb-4 text-white hover:text-cyan-400 transition-colors duration-300">Description</h2>
+                            <p className="text-neutral-300 leading-relaxed hover:text-neutral-200 transition-colors duration-300">{project.description}</p>
                         </div>
 
                         {/* Project Requirements */}
                         <div className="mb-8">
-                            <h2 className="text-xl font-semibold mb-4 text-white">Requirements</h2>
+                            <h2 className="text-xl font-semibold mb-4 text-white hover:text-cyan-400 transition-colors duration-300">Requirements</h2>
                             <ul className="space-y-3">
                                 {project.requirements?.map((req, index) => (
-                                    <li key={index} className="flex items-start gap-3 text-neutral-300">
+                                    <li key={index} className="flex items-start gap-3 text-neutral-300 hover:text-neutral-200 transition-colors duration-300">
                                         <span className="mt-1 w-2 h-2 rounded-full bg-cyan-400 flex-shrink-0" />
                                         {req}
                                     </li>

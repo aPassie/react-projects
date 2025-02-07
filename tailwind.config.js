@@ -1,5 +1,5 @@
 /** @type {import('tailwindcss').Config} */
-export default {
+module.exports = {
     content: [
       "./index.html",
       "./src/**/*.{js,ts,jsx,tsx}",
@@ -41,14 +41,11 @@ export default {
             '0%': {
               transform: 'translate(0px, 0px) scale(1)',
             },
-            '25%': {
-              transform: 'translate(50px, -50px) scale(1.2)',
+            '33%': {
+              transform: 'translate(30px, -50px) scale(1.1)',
             },
-            '50%': {
-              transform: 'translate(0px, 50px) scale(0.9)',
-            },
-            '75%': {
-              transform: 'translate(-50px, -25px) scale(1.1)',
+            '66%': {
+              transform: 'translate(-20px, 20px) scale(0.9)',
             },
             '100%': {
               transform: 'translate(0px, 0px) scale(1)',
@@ -58,7 +55,7 @@ export default {
         animation: {
           'fade-in': 'fade-in 0.2s ease-out',
           float: 'float 6s ease-in-out infinite',
-          blob: 'blob 15s infinite cubic-bezier(0.4, 0, 0.2, 1)',
+          blob: 'blob 7s infinite',
         },
         typography: (theme) => ({
           invert: {
