@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { db, doc, getDoc, updateDoc, setDoc } from '../../config/firebase';
+import { db, doc, getDoc, updateDoc, setDoc, collection, addDoc } from '../../config/firebase';
 import { useAuth } from '../../contexts/AuthContext';
 import {
   IoMdCheckmark,
@@ -148,8 +148,25 @@ export function ProjectDetails() {
         completedProjects: [...(currentUser.completedProjects || []), projectId],
         [`projectProgress.${projectId}`]: 100
       });
+
+      // Create a project completion record
+      const completionData = {
+        userId: currentUser.uid,
+        projectId: projectId,
+        completedAt: new Date().toISOString(),
+        status: 'completed',
+        rating: 5, // Default rating
+        userDisplayName: currentUser.displayName,
+        userEmail: currentUser.email,
+        projectName: project.title
+      };
+
+      // Add to projectCompletions collection
+      await addDoc(collection(db, 'projectCompletions'), completionData);
+
       navigate('/dashboard');
     } catch (err) {
+      console.error('Failed to complete project:', err);
       setError('Failed to complete project: ' + err.message);
     }
   };

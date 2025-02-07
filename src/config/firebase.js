@@ -20,7 +20,8 @@ import {
   query,
   orderBy,
   where,
-  collectionGroup
+  collectionGroup,
+  limit
 } from 'firebase/firestore';
 import {
   getStorage,
@@ -65,8 +66,9 @@ export {
   orderBy,
   where,
   collectionGroup,
+  limit,
   ref,
   uploadBytes,
   getDownloadURL,
   deleteObject
-}; 
+};

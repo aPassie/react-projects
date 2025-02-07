@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { db, collection, getDocs, query, orderBy, doc, updateDoc } from '../../config/firebase';
 import { calculateProjectProgress } from '../../utils/progressCalculator';
@@ -127,6 +127,25 @@ export function StudentDashboard() {
                 onChange={handleSearchChange}
                 className="px-4 py-2 bg-slate-50 rounded-full text-slate-700 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/50 border border-slate-200 transition-all duration-200"
               />
+              <Link
+                to="/leaderboard"
+                className="inline-flex items-center px-3 py-2 border border-transparent text-sm font-medium rounded-md text-blue-600 bg-blue-50 hover:bg-blue-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+              >
+                <svg
+                  className="mr-1.5 h-5 w-5"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth="2"
+                    d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"
+                  />
+                </svg>
+                Leaderboard
+              </Link>
               <button
                 onClick={handleSignOut}
                 className="px-5 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-full transition-colors duration-200 active:scale-95"

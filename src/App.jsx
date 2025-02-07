@@ -5,6 +5,7 @@ import { StudentDashboard } from './components/dashboard/StudentDashboard';
 import { AdminDashboard } from './components/dashboard/AdminDashboard';
 import { ProjectDetails } from './components/projects/ProjectDetails';
 import { NotFound } from './components/common/NotFound';
+import { LeaderboardPage } from './pages/LeaderboardPage'; 
 import { useEffect } from 'react';
 
 // Protected Route wrapper component
@@ -80,6 +81,14 @@ function AppRoutes() {
         element={
           <ProtectedRoute>
             <ProjectDetails />
+          </ProtectedRoute>
+        } 
+      />
+      <Route 
+        path="/leaderboard" 
+        element={
+          <ProtectedRoute>
+            <LeaderboardPage />
           </ProtectedRoute>
         } 
       />
