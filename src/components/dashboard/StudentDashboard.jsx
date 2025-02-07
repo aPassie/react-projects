@@ -180,7 +180,11 @@ export function StudentDashboard() {
                       }`}>
                         {project.difficulty.charAt(0).toUpperCase() + project.difficulty.slice(1)}
                       </span>
-                      <span className="text-sm text-slate-500">
+                      <span className={`text-sm ${
+                        progress[project.id] === 100 
+                          ? 'text-green-600 font-semibold' 
+                          : 'text-slate-500'
+                      }`}>
                         {progress[project.id] ? `${progress[project.id]}% Complete` : '0% Complete'}
                       </span>
                     </div>

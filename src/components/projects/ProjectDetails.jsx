@@ -136,24 +136,8 @@ export function ProjectDetails() {
   const handlePreviousStep = () => {
     if (currentStep > 0) {
       setCurrentStep(prev => prev - 1);
-
-      // Update progress when moving backward
-      const newCompletedSteps = completedSteps.filter(step => step < currentStep - 1);
-      const newProgress = updateProgress(newCompletedSteps);
-
-      // Update local state
-      setCompletedSteps(newCompletedSteps);
-      setProgress(newProgress);
-
-      // Update Firestore
-      const progressRef = doc(db, 'users', currentUser.uid, 'progress', projectId);
-      updateDoc(progressRef, {
-        completedSteps: newCompletedSteps,
-        lastUpdated: new Date(),
-        progress: newProgress
-      }).catch(error => {
-        console.error('Error updating progress:', error);
-      });
+      // No need to filter out completed steps when moving backward
+      // The completed steps should remain as they are
     }
   };
 
@@ -172,13 +156,16 @@ export function ProjectDetails() {
 
   // Add new function to check if a step is accessible
   const isStepAccessible = (stepIndex) => {
-    // Allow access to current step and all previous steps
-    return stepIndex <= currentStep;
+    // A step is accessible if:
+    // 1. It's a previous step (already completed)
+    // 2. It's the current step
+    // 3. It's the next step after the last completed step
+    return stepIndex <= Math.max(...completedSteps, currentStep);
   };
 
   // Modify step navigation function
   const handleStepClick = (index) => {
-    // Only allow navigation to previous steps or current step
+    // Allow navigation to any completed step or the next available step
     if (isStepAccessible(index)) {
       setCurrentStep(index);
     }
@@ -252,11 +239,15 @@ export function ProjectDetails() {
             <span className="text-gray-600">Progress:</span>
             <div className="w-32 h-2 bg-gray-200 rounded-full overflow-hidden">
               <div
-                className="h-full bg-blue-500 rounded-full transition-all duration-300 ease-out"
+                className={`h-full rounded-full transition-all duration-300 ease-out ${
+                  progress === 100 ? 'bg-green-500' : 'bg-blue-500'
+                }`}
                 style={{ width: `${progress}%` }}
               />
             </div>
-            <span className="text-gray-600">{progress}%</span>
+            <span className={`${progress === 100 ? 'text-green-600 font-semibold' : 'text-gray-600'}`}>
+              {progress}%
+            </span>
           </div>
         </div>
       </header>
@@ -312,26 +303,27 @@ export function ProjectDetails() {
                   key={index}
                   onClick={() => handleStepClick(index)}
                   disabled={!isStepAccessible(index)}
-                  className={`w-full text-left p-4 rounded-xl transition-all duration-200 flex items-center gap-3
+                  className={`flex items-center gap-3 w-full px-4 py-3 rounded-xl text-left transition-all duration-200
                     ${index === currentStep
                       ? 'bg-blue-500 text-white shadow-lg shadow-blue-500/20'
-                      : index < currentStep
+                      : completedSteps.includes(index)
                         ? 'bg-green-100 text-green-600 hover:bg-green-200'
-                        : 'bg-gray-200 text-gray-600 cursor-not-allowed'
+                        : !isStepAccessible(index)
+                          ? 'bg-gray-200 text-gray-600 cursor-not-allowed opacity-60'
+                          : 'bg-gray-200 text-gray-600 hover:bg-gray-300'
                     }
-                    ${!isStepAccessible(index) && 'opacity-60'}
                     transform hover:scale-[1.02] hover:-translate-y-0.5
                   `}
                 >
                   <div className={`w-8 h-8 flex-shrink-0 flex items-center justify-center rounded-full border
                     ${index === currentStep
                       ? 'border-white/30'
-                      : index < currentStep
+                      : completedSteps.includes(index)
                         ? 'border-green-500/30'
                         : 'border-gray-400'
                     }`}
                   >
-                    {index < currentStep ? (
+                    {completedSteps.includes(index) ? (
                       <IoMdCheckmark className="w-5 h-5" />
                     ) : (
                       <span>{index + 1}</span>
