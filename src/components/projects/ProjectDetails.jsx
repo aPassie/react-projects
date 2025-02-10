@@ -7,9 +7,9 @@ import {
   IoMdArrowBack,
   IoMdTime,
   IoMdBookmark,
-  IoMdPricetag,
   IoMdBulb,
-  IoMdInformation
+  IoMdInformation,
+  IoMdCreate
 } from 'react-icons/io';
 import { CodeBlock } from '../CodeBlock';
 import { calculateProjectProgress } from '../../utils/progressCalculator';
@@ -26,6 +26,8 @@ export function ProjectDetails() {
   const [progress, setProgress] = useState(0);
   const [showHint, setShowHint] = useState(false);
   const [showTips, setShowTips] = useState(false);
+  const [showNotes, setShowNotes] = useState(false);
+  const [notes, setNotes] = useState('');
 
   useEffect(() => {
     const fetchProject = async () => {
@@ -188,6 +190,25 @@ export function ProjectDetails() {
     }
   };
 
+  // Add click handlers
+  const handleTipsClick = () => {
+    setShowTips(!showTips);
+    setShowHint(false);
+    setShowNotes(false);
+  };
+
+  const handleHintClick = () => {
+    setShowHint(!showHint);
+    setShowTips(false);
+    setShowNotes(false);
+  };
+
+  const handleNotesClick = () => {
+    setShowNotes(!showNotes);
+    setShowTips(false);
+    setShowHint(false);
+  };
+
   // Loading state
   if (loading) {
     return (
@@ -318,6 +339,13 @@ export function ProjectDetails() {
                 </div>
               </div>
             </div>
+            
+            {/* Level Indicator */}
+            <div className="flex items-center px-3 py-1.5 bg-purple-500/10 rounded-lg border border-purple-500/20">
+              <span className="text-sm font-medium text-purple-400">
+                {project.level || 'Beginner'}
+              </span>
+            </div>
           </div>
 
           <p className="text-neutral-300 leading-relaxed">{project.description}</p>
@@ -340,45 +368,47 @@ export function ProjectDetails() {
         {/* Steps and Content Grid */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
           {/* Steps Sidebar */}
-          <div className="bg-neutral-900/50 backdrop-blur-sm border border-neutral-800 rounded-xl p-6 hover:border-neutral-700 transition-colors duration-300">
-            <h2 className="text-xl font-bold mb-4 text-white">
-              Project Steps
-            </h2>
-            <div className="space-y-2">
-              {project.steps.map((step, index) => (
-                <button
-                  key={index}
-                  onClick={() => handleStepClick(index)}
-                  disabled={!isStepAccessible(index)}
-                  className={`flex items-center gap-3 w-full px-4 py-3 rounded-xl text-left transition-all duration-200
-                    ${index === currentStep
-                      ? 'bg-cyan-500/20 text-cyan-400 shadow-lg shadow-cyan-500/20'
-                      : completedSteps.includes(index)
-                        ? 'bg-green-500/10 text-green-400 hover:bg-green-500/20'
-                        : !isStepAccessible(index)
-                          ? 'bg-neutral-800/50 text-neutral-600 cursor-not-allowed opacity-60'
-                          : 'bg-neutral-800/50 text-neutral-400 hover:bg-neutral-700/50'
-                    }
-                    transform hover:scale-[1.02] hover:-translate-y-0.5
-                  `}
-                >
-                  <div className={`w-8 h-8 flex-shrink-0 flex items-center justify-center rounded-full border
-                    ${index === currentStep
-                      ? 'border-cyan-500/30'
-                      : completedSteps.includes(index)
-                        ? 'border-green-500/30'
-                        : 'border-neutral-700'
-                    }`}
+          <div style={{ position: 'sticky', top: '2rem' }}>
+            <div className="bg-neutral-900/50 backdrop-blur-sm border border-neutral-800 rounded-xl p-6 hover:border-neutral-700 transition-colors duration-300 w-full">
+              <h2 className="text-xl font-bold mb-4 text-white">
+                Project Steps
+              </h2>
+              <div className="space-y-2 w-full">
+                {project.steps.map((step, index) => (
+                  <button
+                    key={index}
+                    onClick={() => handleStepClick(index)}
+                    disabled={!isStepAccessible(index)}
+                    className={`flex items-center gap-3 w-full px-4 py-3 rounded-xl text-left transition-all duration-200
+                      ${index === currentStep
+                        ? 'bg-cyan-500/20 text-cyan-400 shadow-lg shadow-cyan-500/20'
+                        : completedSteps.includes(index)
+                          ? 'bg-green-500/10 text-green-400 hover:bg-green-500/20'
+                          : !isStepAccessible(index)
+                            ? 'bg-neutral-800/50 text-neutral-600 cursor-not-allowed opacity-60'
+                            : 'bg-neutral-800/50 text-neutral-400 hover:bg-neutral-700/50'
+                      }
+                      transform hover:scale-[1.02] hover:-translate-y-0.5
+                    `}
                   >
-                    {completedSteps.includes(index) ? (
-                      <IoMdCheckmark className="w-5 h-5" />
-                    ) : (
-                      <span>{index + 1}</span>
-                    )}
-                  </div>
-                  <span className="flex-1">{step.title}</span>
-                </button>
-              ))}
+                    <div className={`w-8 h-8 flex-shrink-0 flex items-center justify-center rounded-full border
+                      ${index === currentStep
+                        ? 'border-cyan-500/30'
+                        : completedSteps.includes(index)
+                          ? 'border-green-500/30'
+                          : 'border-neutral-700'
+                      }`}
+                    >
+                      {completedSteps.includes(index) ? (
+                        <IoMdCheckmark className="w-5 h-5" />
+                      ) : (
+                        <span>{index + 1}</span>
+                      )}
+                    </div>
+                    <span className="flex-1">{step.title}</span>
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
 
@@ -386,7 +416,7 @@ export function ProjectDetails() {
           <div className="md:col-span-2">
             <div className="bg-neutral-900/50 backdrop-blur-sm border border-neutral-800 rounded-xl p-6 hover:border-neutral-700 transition-colors duration-300">
               <div className="space-y-6">
-                {/* Step Title with Hint and Tips Buttons */}
+                {/* Step Title with Hint, Tips, and Notes Buttons */}
                 <div className="flex items-center justify-between">
                   <h1 className="text-2xl font-bold text-white">
                     {project.steps[safeCurrentStep].title}
@@ -394,14 +424,13 @@ export function ProjectDetails() {
                   <div className="relative flex items-center gap-2">
                     {/* Tips Button */}
                     <button
-                      onClick={() => {
-                        setShowTips(!showTips);
-                        setShowHint(false);
-                      }}
-                      className="p-2 rounded-full hover:bg-cyan-500/10 transition-colors group"
-                      title="Show Tips"
+                      onClick={handleTipsClick}
+                      className="p-2 rounded-full hover:bg-cyan-500/10 transition-colors group relative"
                     >
                       <IoMdInformation className="w-6 h-6 text-cyan-400 group-hover:text-cyan-300" />
+                      <span className="absolute -bottom-8 right-0 min-w-max px-2 py-1 bg-neutral-900 text-neutral-300 text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity">
+                        Show Tips
+                      </span>
                     </button>
 
                     {/* Tips Popup */}
@@ -437,14 +466,13 @@ export function ProjectDetails() {
 
                     {/* Hint Button */}
                     <button
-                      onClick={() => {
-                        setShowHint(!showHint);
-                        setShowTips(false);
-                      }}
-                      className="p-2 rounded-full hover:bg-yellow-500/10 transition-colors group"
-                      title="Show Hint"
+                      onClick={handleHintClick}
+                      className="p-2 rounded-full hover:bg-yellow-500/10 transition-colors group relative"
                     >
                       <IoMdBulb className="w-6 h-6 text-yellow-400 group-hover:text-yellow-300" />
+                      <span className="absolute -bottom-8 right-0 min-w-max px-2 py-1 bg-neutral-900 text-neutral-300 text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity">
+                        Show Hint
+                      </span>
                     </button>
 
                     {/* Hint Popup */}
@@ -467,6 +495,46 @@ export function ProjectDetails() {
                         </div>
                         <div className="mt-2 text-sm text-neutral-300">
                           {project.steps[safeCurrentStep].hint || "Try breaking down the problem into smaller steps. If you're stuck, review the previous steps or check the project resources."}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Notes Button */}
+                    <button
+                      onClick={handleNotesClick}
+                      className="p-2 rounded-full hover:bg-purple-500/10 transition-colors group relative"
+                    >
+                      <IoMdCreate className="w-6 h-6 text-purple-400 group-hover:text-purple-300" />
+                      <span className="absolute -bottom-8 right-0 min-w-max px-2 py-1 bg-neutral-900 text-neutral-300 text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity">
+                        Add Notes
+                      </span>
+                    </button>
+
+                    {/* Notes Popup */}
+                    {showNotes && (
+                      <div className="absolute right-0 top-full mt-2 w-72 p-4 bg-neutral-900/90 backdrop-blur-sm rounded-xl shadow-xl z-10 animate-fade-in border border-neutral-800">
+                        <div className="flex justify-between items-start gap-2">
+                          <div className="flex items-center gap-2 text-purple-400">
+                            <IoMdCreate className="w-5 h-5 flex-shrink-0" />
+                            <span className="font-semibold">Notes</span>
+                          </div>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setShowNotes(false);
+                            }}
+                            className="text-neutral-400 hover:text-white transition-colors text-xl leading-none"
+                          >
+                            ×
+                          </button>
+                        </div>
+                        <div className="mt-2">
+                          <textarea
+                            value={notes}
+                            onChange={(e) => setNotes(e.target.value)}
+                            placeholder="Add your notes here..."
+                            className="w-full h-32 bg-neutral-800/50 border border-neutral-700 rounded-lg p-2 text-sm text-neutral-300 placeholder-neutral-500 focus:outline-none focus:border-purple-500/50 resize-none"
+                          />
                         </div>
                       </div>
                     )}

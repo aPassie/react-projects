@@ -51,11 +51,22 @@ module.exports = {
               transform: 'translate(0px, 0px) scale(1)',
             },
           },
+          twinkle: {
+            '0%, 100%': {
+              opacity: 0.2,
+              transform: 'scale(1, 1) rotate(0deg)',
+            },
+            '50%': {
+              opacity: 0.5,
+              transform: 'scale(1.1, 1.1) rotate(1deg)',
+            },
+          },
         },
         animation: {
           'fade-in': 'fade-in 0.2s ease-out',
           float: 'float 6s ease-in-out infinite',
           blob: 'blob 7s infinite',
+          'twinkle': 'twinkle 10s ease-in-out infinite',
         },
         typography: (theme) => ({
           invert: {
