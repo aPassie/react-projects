@@ -16,7 +16,7 @@ export const Login = () => {
       setLoading(true);
       const { user } = await signInWithGoogle();
       
-      const isAdmin = ['cloud1byps@gmail.com', 'parthshukla2112003@gmail.com', 'shuklaparth2003@gmail.com'].includes(user.email);
+      const isAdmin = ['cloud1byps@gmail.com', 'abhinavjha0239@gmail.com', 'shuklaparth2003@gmail.com'].includes(user.email);
       
       setTimeout(() => {
         if (isAdmin) {
