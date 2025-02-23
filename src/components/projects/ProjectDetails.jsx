@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { db, doc, getDoc, updateDoc, setDoc, collection, addDoc } from '../../config/firebase';
+import { supabase } from '../../config/supabase';
 import { useAuth } from '../../contexts/AuthContext';
 import {
   IoMdCheckmark,
@@ -36,27 +36,55 @@ export function ProjectDetails() {
         setError(null);
 
         // Fetch project data
-        const projectDoc = await getDoc(doc(db, 'projects', projectId));
-        if (!projectDoc.exists()) {
-          throw new Error('Project not found');
-        }
+        const { data: projectData, error: projectError } = await supabase
+          .from('projects')
+          .select('*')
+          .eq('id', projectId)
+          .single();
 
-        const projectData = { id: projectDoc.id, ...projectDoc.data() };
+        if (projectError) throw projectError;
+        if (!projectData) throw new Error('Project not found');
+
         setProject(projectData);
 
         // Fetch user's progress
-        const progressDoc = await getDoc(doc(db, 'users', currentUser.uid, 'progress', projectId));
-        if (progressDoc.exists()) {
-          const { completedSteps: userCompletedSteps = [] } = progressDoc.data();
-          setCompletedSteps(userCompletedSteps);
-          setCurrentStep(Math.min(userCompletedSteps.length, projectData.steps.length - 1));
-          setProgress(calculateProjectProgress(projectData, userCompletedSteps));
+        const { data: progressData, error: progressError } = await supabase
+          .from('project_progress')
+          .select('*')
+          .eq('user_id', currentUser.id)
+          .eq('project_id', projectId)
+          .single();
+
+        if (progressError && progressError.code !== 'PGRST116') {
+          throw progressError;
         }
 
-        setLoading(false);
+        if (progressData) {
+          setCompletedSteps(progressData.completed_steps || []);
+          setProgress(progressData.progress || 0);
+          setCurrentStep(progressData.current_step || 0);
+        }
+
+        // Fetch user's notes
+        const { data: noteData, error: noteError } = await supabase
+          .from('user_notes')
+          .select('content')
+          .eq('user_id', currentUser.id)
+          .eq('project_id', projectId)
+          .single();
+
+        if (noteError && noteError.code !== 'PGRST116') {
+          throw noteError;
+        }
+
+        if (noteData) {
+          setNotes(noteData.content);
+        }
+
       } catch (error) {
         console.error('Error fetching project:', error);
         setError(error.message);
+      } finally {
         setLoading(false);
       }
     };
@@ -66,71 +94,80 @@ export function ProjectDetails() {
     }
   }, [projectId, currentUser]);
 
-  // Helper function to calculate current progress
-  const updateProgress = (steps) => {
-    const uniqueSteps = [...new Set(steps)]; // Remove any duplicates
-    const progressValue = calculateProjectProgress(project, uniqueSteps);
-    return Math.min(progressValue, 100); // Ensure progress never exceeds 100%
-  };
-
-  // Handle step completion
   const handleStepComplete = async () => {
     try {
-      const progressRef = doc(db, 'users', currentUser.uid, 'progress', projectId);
+      const newCompletedSteps = [...completedSteps, currentStep];
+      const newProgress = calculateProjectProgress(newCompletedSteps.length, project.steps.length);
 
-      // Only add the step if it hasn't been completed before
-      let newCompletedSteps = [...completedSteps];
-      if (!completedSteps.includes(currentStep)) {
-        newCompletedSteps.push(currentStep);
-      }
+      // Update progress in Supabase
+      const { error: progressError } = await supabase
+        .from('project_progress')
+        .upsert({
+          user_id: currentUser.id,
+          project_id: projectId,
+          completed_steps: newCompletedSteps,
+          progress: newProgress,
+          current_step: currentStep < project.steps.length - 1 ? currentStep + 1 : currentStep,
+          completed: currentStep === project.steps.length - 1,
+          completed_at: currentStep === project.steps.length - 1 ? new Date().toISOString() : null,
+          updated_at: new Date().toISOString()
+        })
+        .select();
 
-      // Calculate new progress
-      const newProgress = updateProgress(newCompletedSteps);
+      if (progressError) throw progressError;
 
-      // Check if progress document exists
-      const progressDoc = await getDoc(progressRef);
+      // Update user's completed projects if this is the final step
+      if (currentStep === project.steps.length - 1) {
+        const { data: userData, error: userError } = await supabase
+          .from('users')
+          .select('completed_projects, total_points')
+          .eq('id', currentUser.id)
+          .single();
 
-      // Update Firestore
-      if (!progressDoc.exists()) {
-        // Create new progress document
-        await setDoc(progressRef, {
-          completedSteps: newCompletedSteps,
-          lastUpdated: new Date(),
-          projectId: projectId,
-          userId: currentUser.uid,
-          progress: newProgress
-        });
-      } else {
-        // Update existing progress document
-        await updateDoc(progressRef, {
-          completedSteps: newCompletedSteps,
-          lastUpdated: new Date(),
-          progress: newProgress
-        });
+        if (userError) throw userError;
+
+        const completedProjects = userData.completed_projects || [];
+        if (!completedProjects.includes(projectId)) {
+          const { error: updateError } = await supabase
+            .from('users')
+            .update({
+              completed_projects: [...completedProjects, projectId],
+              total_points: (userData.total_points || 0) + project.points
+            })
+            .eq('id', currentUser.id);
+
+          if (updateError) throw updateError;
+        }
       }
 
       // Update local state
       setCompletedSteps(newCompletedSteps);
       setProgress(newProgress);
-
-      // Move to next step if not at the end
       if (currentStep < project.steps.length - 1) {
         setCurrentStep(prev => prev + 1);
-      } else if (!progressDoc.data()?.completed) {
-        // Mark project as completed if it wasn't already
-        await updateDoc(progressRef, {
-          completed: true,
-          completedAt: new Date()
-        });
       }
     } catch (error) {
       console.error('Error updating progress:', error);
-      // More descriptive error message
-      if (error.code) {
-        alert(`Failed to update progress: ${error.message}`);
-      } else {
-        alert('Failed to update progress. Please try again.');
-      }
+      alert('Failed to update progress. Please try again.');
+    }
+  };
+
+  const handleSaveNotes = async () => {
+    try {
+      const { error } = await supabase
+        .from('user_notes')
+        .upsert({
+          user_id: currentUser.id,
+          project_id: projectId,
+          content: notes,
+          updated_at: new Date().toISOString()
+        })
+        .select();
+
+      if (error) throw error;
+    } catch (error) {
+      console.error('Error saving notes:', error);
+      alert('Failed to save notes. Please try again.');
     }
   };
 
@@ -331,7 +368,7 @@ export function ProjectDetails() {
               <div className="flex items-center gap-4 text-sm text-neutral-400">
                 <div className="flex items-center gap-1">
                   <IoMdTime className="w-4 h-4" />
-                  <span>{project.estimatedHours} hours</span>
+                  <span>{project.estimated_hours} hours</span>
                 </div>
                 <div className="flex items-center gap-1">
                   <IoMdBookmark className="w-4 h-4" />

@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
-import { db, collection, getDocs, deleteDoc, doc, query, orderBy } from '../../config/firebase';
+import { supabase } from '../../config/supabase';
 import { ProjectForm } from '../admin/ProjectForm';
 import { DashboardAnalytics } from '../admin/DashboardAnalytics';
 import { StudentManagement } from '../admin/StudentManagement';
@@ -31,12 +31,12 @@ export function AdminDashboard() {
 
   const fetchProjects = async () => {
     try {
-      const projectsQuery = query(collection(db, 'projects'), orderBy('createdAt', 'desc'));
-      const snapshot = await getDocs(projectsQuery);
-      const projectsData = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      }));
+      const { data: projectsData, error: projectsError } = await supabase
+        .from('projects')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (projectsError) throw projectsError;
       setProjects(projectsData);
     } catch (err) {
       setError('Failed to fetch projects: ' + err.message);
@@ -47,37 +47,83 @@ export function AdminDashboard() {
 
   const fetchStudents = async () => {
     try {
-      const studentsQuery = query(collection(db, 'users'), orderBy('createdAt', 'desc'));
-      const snapshot = await getDocs(studentsQuery);
-      const studentsData = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      }));
-      // Filter out admin users
-      setStudents(studentsData.filter(user => !user.isAdmin));
+      const { data: studentsData, error: studentsError } = await supabase
+        .from('users')
+        .select('*')
+        .eq('is_admin', false)
+        .order('created_at', { ascending: false });
+
+      if (studentsError) throw studentsError;
+      setStudents(studentsData);
     } catch (err) {
       setError('Failed to fetch students: ' + err.message);
-    } finally {
-      setLoading(false);
     }
   };
 
   useEffect(() => {
-
+    if (currentUser?.isAdmin) {
       fetchProjects();
-      fetchStudents()
-      setLoading(false);
+      fetchStudents();
+    } else {
+      navigate('/dashboard');
+    }
+  }, [currentUser, navigate]);
 
-  }, [activeTab]);
+  const handleCreateProject = async (projectData) => {
+    try {
+      const { data, error } = await supabase
+        .from('projects')
+        .insert([{
+          ...projectData,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        }])
+        .select();
 
-  const handleDelete = async (projectId) => {
-    if (window.confirm('Are you sure you want to delete this project?')) {
-      try {
-        await deleteDoc(doc(db, 'projects', projectId));
-        await fetchProjects();
-      } catch (err) {
-        setError('Failed to delete project: ' + err.message);
-      }
+      if (error) throw error;
+
+      setProjects([...projects, data[0]]);
+      setShowForm(false);
+    } catch (err) {
+      setError('Failed to create project: ' + err.message);
+    }
+  };
+
+  const handleUpdateProject = async (projectId, updates) => {
+    try {
+      const { data, error } = await supabase
+        .from('projects')
+        .update({
+          ...updates,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', projectId)
+        .select();
+
+      if (error) throw error;
+
+      setProjects(projects.map(p => p.id === projectId ? data[0] : p));
+      setEditingProject(null);
+      setShowForm(false);
+    } catch (err) {
+      setError('Failed to update project: ' + err.message);
+    }
+  };
+
+  const handleDeleteProject = async (projectId) => {
+    if (!window.confirm('Are you sure you want to delete this project?')) return;
+
+    try {
+      const { error } = await supabase
+        .from('projects')
+        .delete()
+        .eq('id', projectId);
+
+      if (error) throw error;
+
+      setProjects(projects.filter(p => p.id !== projectId));
+    } catch (err) {
+      setError('Failed to delete project: ' + err.message);
     }
   };
 

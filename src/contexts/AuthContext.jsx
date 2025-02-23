@@ -1,15 +1,5 @@
 import { createContext, useContext, useState, useEffect } from 'react';
-import { 
-  auth,
-  GoogleAuthProvider,
-  signInWithPopup,
-  signOut,
-  onAuthStateChanged,
-  db,
-  doc,
-  setDoc,
-  getDoc
-} from '../config/firebase';
+import { supabase, signInWithGoogle as supabaseSignInWithGoogle } from '../config/supabase';
 
 const AuthContext = createContext();
 
@@ -20,7 +10,6 @@ const ADMIN_EMAILS = [
   'd2055960@gmail.com',
   // Add more admin emails as needed
 ];
-
 
 export function useAuth() {
   return useContext(AuthContext);
@@ -33,45 +22,61 @@ export function AuthProvider({ children }) {
 
   async function signInWithGoogle() {
     try {
-      const provider = new GoogleAuthProvider();
-      const result = await signInWithPopup(auth, provider);
+      const { user, session } = await supabaseSignInWithGoogle();
+      
+      if (!user) throw new Error('No user data returned from Supabase');
       
       // Check if user is admin
-      const isUserAdmin = ADMIN_EMAILS.includes(result.user.email);
-      console.log('Is user admin:', isUserAdmin, 'Email:', result.user.email); // Debug log
+      const isUserAdmin = ADMIN_EMAILS.includes(user.email);
+      console.log('Is user admin:', isUserAdmin, 'Email:', user.email);
       
-      // Create or update user document in Firestore
-      const userRef = doc(db, 'users', result.user.uid);
-      const userSnap = await getDoc(userRef);
-      
-      const userData = {
-        email: result.user.email,
-        displayName: result.user.displayName,
-        photoURL: result.user.photoURL,
-        isAdmin: isUserAdmin,
-        updatedAt: new Date().toISOString(),
-      };
+      // Get or create user profile
+      const { data: profile, error: profileError } = await supabase
+        .from('users')
+        .select('*')
+        .eq('id', user.id)
+        .single();
 
-      if (!userSnap.exists()) {
-        // New user - set all fields
-        await setDoc(userRef, {
-          ...userData,
-          createdAt: new Date().toISOString(),
-          completedProjects: [],
-          projectProgress: {},
-          points: 0,
-          badges: []
-        });
-      } else {
-        // Existing user - update fields
-        await setDoc(userRef, userData, { merge: true });
+      if (profileError && profileError.code !== 'PGRST116') {
+        throw profileError;
       }
 
-      // Set admin status in state
+      const userData = {
+        id: user.id,
+        email: user.email,
+        display_name: user.user_metadata?.full_name || user.email?.split('@')[0],
+        avatar_url: user.user_metadata?.avatar_url,
+        is_admin: isUserAdmin,
+        updated_at: new Date().toISOString(),
+      };
+
+      if (!profile) {
+        // Create new user profile
+        const { error: insertError } = await supabase
+          .from('users')
+          .insert([{
+            ...userData,
+            created_at: new Date().toISOString(),
+            completed_projects: [],
+            total_points: 0,
+            current_streak: 0
+          }]);
+        
+        if (insertError) throw insertError;
+      } else {
+        // Update existing user profile
+        const { error: updateError } = await supabase
+          .from('users')
+          .update(userData)
+          .eq('id', user.id);
+        
+        if (updateError) throw updateError;
+      }
+
       setIsAdmin(isUserAdmin);
-      console.log('Admin status set to:', isUserAdmin); // Debug log
+      setCurrentUser({ ...user, isAdmin: isUserAdmin });
       
-      return result;
+      return { user, session };
     } catch (error) {
       console.error('Sign in error:', error);
       throw error;
@@ -80,7 +85,7 @@ export function AuthProvider({ children }) {
 
   async function logout() {
     try {
-      await signOut(auth);
+      await supabase.auth.signOut();
       setIsAdmin(false);
       setCurrentUser(null);
     } catch (error) {
@@ -90,39 +95,24 @@ export function AuthProvider({ children }) {
   }
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      if (user) {
-        // Check if user is admin
+    // Set up auth state listener
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (session) {
+        const user = session.user;
         const isUserAdmin = ADMIN_EMAILS.includes(user.email);
-        console.log('Auth state changed - Is admin:', isUserAdmin, 'Email:', user.email); // Debug log
         
         try {
-          // Get user data from Firestore
-          const userRef = doc(db, 'users', user.uid);
-          const userSnap = await getDoc(userRef);
-          
-          if (userSnap.exists()) {
-            const userData = userSnap.data();
-            // Always use the current admin status based on email
-            const updatedUser = {
-              ...user,
-              ...userData,
-              isAdmin: isUserAdmin
-            };
-            
-            // Update Firestore if admin status changed
-            if (userData.isAdmin !== isUserAdmin) {
-              await setDoc(userRef, { isAdmin: isUserAdmin }, { merge: true });
-            }
-            
-            setCurrentUser(updatedUser);
-          } else {
-            setCurrentUser({ ...user, isAdmin: isUserAdmin });
-          }
-          
+          // Get user profile
+          const { data: profile } = await supabase
+            .from('users')
+            .select('*')
+            .eq('id', user.id)
+            .single();
+
+          setCurrentUser({ ...user, ...profile, isAdmin: isUserAdmin });
           setIsAdmin(isUserAdmin);
         } catch (error) {
-          console.error('Error fetching user data:', error);
+          console.error('Error fetching user profile:', error);
         }
       } else {
         setCurrentUser(null);
@@ -131,7 +121,20 @@ export function AuthProvider({ children }) {
       setLoading(false);
     });
 
-    return unsubscribe;
+    // Initial session check
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session) {
+        const user = session.user;
+        const isUserAdmin = ADMIN_EMAILS.includes(user.email);
+        setCurrentUser({ ...user, isAdmin: isUserAdmin });
+        setIsAdmin(isUserAdmin);
+      }
+      setLoading(false);
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
   }, []);
 
   const value = {

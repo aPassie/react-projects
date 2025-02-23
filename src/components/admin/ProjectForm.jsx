@@ -1,37 +1,53 @@
-import { useState } from 'react';
-import { db, collection, addDoc, updateDoc, doc } from '../../config/firebase';
+import { useState, useEffect } from 'react';
+import { supabase } from '../../config/supabase';
 import { ProjectContent } from './ProjectContent';
 import Editor from "@monaco-editor/react";
 
-export function ProjectForm({ project = null, onComplete, categories, difficultyLevels }) {
+export function ProjectForm({ project = null, onSubmit, onCancel }) {
   const [formData, setFormData] = useState({
-    title: project?.title || '',
-    description: project?.description || '',
-    category: project?.category || categories[0].id,
-    difficulty: project?.difficulty || difficultyLevels[0].id,
-    prerequisites: project?.prerequisites || [],
-    estimatedHours: project?.estimatedHours || '',
-    learningObjectives: project?.learningObjectives || [],
-    steps: project?.steps || [{
-      title: '',
-      description: '',
-      code: '',
-      hint: '',
-      tips: []
-    }],
-    resources: project?.resources || [],
-    tags: '', // Initialize as empty string, will be filled by user
-    content: project?.content || {
-      description: '',
-      codeSnippets: {},
-      images: [],
-      videos: [],
-      resources: []
-    }
+    title: '',
+    description: '',
+    difficulty: '',
+    tags: [],
+    steps: [],
+    points: 0,
+    estimated_hours: 0,
+    prerequisites: [],
+    resources: [],
+    learning_objectives: [],
+    ...project
   });
+
+  const [settings, setSettings] = useState({
+    difficultyLevels: [],
+    projectTags: []
+  });
+
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [activeSection, setActiveSection] = useState('basic'); // 'basic' or 'content'
+
+  useEffect(() => {
+    fetchSettings();
+  }, []);
+
+  const fetchSettings = async () => {
+    try {
+      const { data: settingsData, error: settingsError } = await supabase
+        .from('settings')
+        .select('*')
+        .eq('id', 'global')
+        .single();
+
+      if (settingsError) throw settingsError;
+
+      setSettings({
+        difficultyLevels: settingsData.difficulty_levels || [],
+        projectTags: settingsData.project_tags || []
+      });
+    } catch (err) {
+      setError('Failed to fetch settings: ' + err.message);
+    }
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -41,30 +57,116 @@ export function ProjectForm({ project = null, onComplete, categories, difficulty
     try {
       const projectData = {
         ...formData,
-        tags: formData.tags ? formData.tags.split(',').map(tag => tag.trim()).filter(Boolean) : [],
-        prerequisites: formData.prerequisites.filter(p => p && p.trim()),
-        learningObjectives: formData.learningObjectives.filter(o => o && o.trim()),
-        updatedAt: new Date().toISOString()
+        updated_at: new Date().toISOString()
       };
 
+      let result;
+      
       if (project?.id) {
-        await updateDoc(doc(db, 'projects', project.id), projectData);
+        // Update existing project
+        const { data, error } = await supabase
+          .from('projects')
+          .update(projectData)
+          .eq('id', project.id)
+          .select()
+          .single();
+          
+        if (error) throw error;
+        result = data;
       } else {
-        await addDoc(collection(db, 'projects'), {
-          ...projectData,
-          createdAt: new Date().toISOString(),
-          completions: 0,
-          averageRating: 0,
-          totalRatings: 0
-        });
+        // Create new project
+        const { data, error } = await supabase
+          .from('projects')
+          .insert([{
+            ...projectData,
+            created_at: new Date().toISOString()
+          }])
+          .select()
+          .single();
+          
+        if (error) throw error;
+        result = data;
       }
 
-      onComplete();
+      console.log('Supabase response:', result);
+      onSubmit(result);
     } catch (err) {
-      setError('Failed to save project: ' + err.message);
+      console.error('Full error details:', err);
+      setError('Failed to save project: ' + (err.message || err.details || JSON.stringify(err)));
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
+
+  const handleTagsChange = (e) => {
+    const selectedTags = Array.from(e.target.selectedOptions, option => option.value);
+    setFormData(prev => ({
+      ...prev,
+      tags: selectedTags
+    }));
+  };
+
+  const handleStepChange = (index, field, value) => {
+    setFormData(prev => ({
+      ...prev,
+      steps: prev.steps.map((step, i) =>
+        i === index ? { ...step, [field]: value } : step
+      )
+    }));
+  };
+
+  const addStep = () => {
+    setFormData(prev => ({
+      ...prev,
+      steps: [...prev.steps, { title: '', description: '', points: 0 }]
+    }));
+  };
+
+  const removeStep = (index) => {
+    setFormData(prev => ({
+      ...prev,
+      steps: prev.steps.filter((_, i) => i !== index)
+    }));
+  };
+
+  const handleResourceChange = (index, field, value) => {
+    setFormData(prev => ({
+      ...prev,
+      resources: prev.resources.map((resource, i) =>
+        i === index ? { ...resource, [field]: value } : resource
+      )
+    }));
+  };
+
+  const addResource = () => {
+    setFormData(prev => ({
+      ...prev,
+      resources: [...prev.resources, { title: '', url: '' }]
+    }));
+  };
+
+  const removeResource = (index) => {
+    setFormData(prev => ({
+      ...prev,
+      resources: prev.resources.filter((_, i) => i !== index)
+    }));
+  };
+
+  const handlePrerequisiteChange = (index, value) => {
+    setFormData(prev => ({
+      ...prev,
+      prerequisites: prev.prerequisites.map((prereq, i) =>
+        i === index ? value : prereq
+      )
+    }));
   };
 
   const addPrerequisite = () => {
@@ -74,408 +176,324 @@ export function ProjectForm({ project = null, onComplete, categories, difficulty
     }));
   };
 
-  const updatePrerequisite = (index, value) => {
-    const newPrerequisites = [...formData.prerequisites];
-    newPrerequisites[index] = value;
-    setFormData(prev => ({ ...prev, prerequisites: newPrerequisites }));
-  };
-
-  const addObjective = () => {
+  const removePrerequisite = (index) => {
     setFormData(prev => ({
       ...prev,
-      learningObjectives: [...prev.learningObjectives, '']
+      prerequisites: prev.prerequisites.filter((_, i) => i !== index)
     }));
   };
 
-  const updateObjective = (index, value) => {
-    const newObjectives = [...formData.learningObjectives];
-    newObjectives[index] = value;
-    setFormData(prev => ({ ...prev, learningObjectives: newObjectives }));
-  };
-
-  const handleStepCodeChange = (index, code) => {
-    const newSteps = [...formData.steps];
-    newSteps[index].code = code;
+  const handleLearningObjectiveChange = (index, value) => {
     setFormData(prev => ({
       ...prev,
-      steps: newSteps
+      learning_objectives: prev.learning_objectives.map((obj, i) =>
+        i === index ? value : obj
+      )
     }));
   };
 
-  const handleStepChange = (index, field, value) => {
-    const newSteps = [...formData.steps];
-    newSteps[index][field] = value;
+  const addLearningObjective = () => {
     setFormData(prev => ({
       ...prev,
-      steps: newSteps
+      learning_objectives: [...prev.learning_objectives, '']
     }));
   };
 
-  const addStep = () => {
+  const removeLearningObjective = (index) => {
     setFormData(prev => ({
       ...prev,
-      steps: [...prev.steps, {
-        title: '',
-        description: '',
-        code: '',
-        hint: '',
-        tips: []
-      }]
+      learning_objectives: prev.learning_objectives.filter((_, i) => i !== index)
     }));
-  };
-
-  const removeStep = (index) => {
-    if (formData.steps.length > 1) {
-      const newSteps = formData.steps.filter((_, i) => i !== index);
-      setFormData(prev => ({
-        ...prev,
-        steps: newSteps
-      }));
-    }
   };
 
   return (
     <div className="space-y-8">
-      {/* Section Tabs */}
-      <div className="flex space-x-4 border-b border-slate-200">
-        <button
-          onClick={() => setActiveSection('basic')}
-          className={`px-8 py-4 -mb-px font-medium text-base transition-all duration-200 hover:text-blue-500 ${
-            activeSection === 'basic'
-              ? 'border-b-2 border-blue-500 text-blue-500 scale-105'
-              : 'text-slate-600 hover:text-slate-900'
-          }`}
-        >
-          Basic Information
-        </button>
-        <button
-          onClick={() => setActiveSection('content')}
-          className={`px-8 py-4 -mb-px font-medium text-base transition-all duration-200 hover:text-blue-500 ${
-            activeSection === 'content'
-              ? 'border-b-2 border-blue-500 text-blue-500 scale-105'
-              : 'text-slate-600 hover:text-slate-900'
-          }`}
-        >
-          Content & Resources
-        </button>
-      </div>
-
       <form onSubmit={handleSubmit} className="space-y-8">
         {error && (
-          <div className="bg-red-100 border border-red-400 text-red-700 p-4 rounded-lg animate-fade-in">
+          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
             {error}
           </div>
         )}
 
-        {activeSection === 'basic' ? (
-          <div className="space-y-8 bg-white p-8 rounded-xl border border-slate-200 shadow-sm">
-            {/* Basic Information Fields */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-              <div className="space-y-6">
-                <div className="group">
-                  <label className="block text-base font-medium text-slate-700 mb-2 group-hover:text-blue-500 transition-colors">Title</label>
+        <div className="space-y-4">
+          <div>
+            <label htmlFor="title" className="block text-sm font-medium text-gray-700">
+              Title
+            </label>
+            <input
+              type="text"
+              id="title"
+              name="title"
+              value={formData.title}
+              onChange={handleChange}
+              required
+              className="mt-1 block w-full rounded-md border border-gray-300 py-2 px-3 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+            />
+          </div>
+
+          <div>
+            <label htmlFor="description" className="block text-sm font-medium text-gray-700">
+              Description
+            </label>
+            <textarea
+              id="description"
+              name="description"
+              value={formData.description}
+              onChange={handleChange}
+              required
+              rows={4}
+              className="mt-1 block w-full rounded-md border border-gray-300 py-2 px-3 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+            />
+          </div>
+
+          <div>
+            <label htmlFor="difficulty" className="block text-sm font-medium text-gray-700">
+              Difficulty
+            </label>
+            <select
+              id="difficulty"
+              name="difficulty"
+              value={formData.difficulty}
+              onChange={handleChange}
+              required
+              className="mt-1 block w-full rounded-md border border-gray-300 py-2 px-3 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+            >
+              <option value="">Select difficulty</option>
+              {settings.difficultyLevels.map(level => (
+                <option key={level.id} value={level.name}>
+                  {level.name}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label htmlFor="tags" className="block text-sm font-medium text-gray-700">
+              Tags
+            </label>
+            <select
+              id="tags"
+              name="tags"
+              multiple
+              value={formData.tags}
+              onChange={handleTagsChange}
+              className="mt-1 block w-full rounded-md border border-gray-300 py-2 px-3 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+            >
+              {settings.projectTags.map(tag => (
+                <option key={tag.id} value={tag.name}>
+                  {tag.name}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label htmlFor="points" className="block text-sm font-medium text-gray-700">
+              Points
+            </label>
+            <input
+              type="number"
+              id="points"
+              name="points"
+              value={formData.points}
+              onChange={handleChange}
+              required
+              min="0"
+              className="mt-1 block w-full rounded-md border border-gray-300 py-2 px-3 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+            />
+          </div>
+
+          <div>
+            <label htmlFor="estimated_hours" className="block text-sm font-medium text-gray-700">
+              Estimated Hours
+            </label>
+            <input
+              type="number"
+              id="estimated_hours"
+              name="estimated_hours"
+              value={formData.estimated_hours}
+              onChange={handleChange}
+              placeholder="e.g., 2"
+              required
+              min="0"
+              className="mt-1 block w-full rounded-md border border-gray-300 py-2 px-3 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Prerequisites
+            </label>
+            <div className="space-y-2">
+              {formData.prerequisites.map((prereq, index) => (
+                <div key={index} className="flex gap-2">
                   <input
-                    type="text"
-                    value={formData.title}
-                    onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))}
-                    className="block w-full rounded-lg bg-slate-50 border-slate-200 px-4 py-3 focus:border-blue-500 focus:ring-blue-500/50 hover:border-blue-400 transition-all duration-200"
-                    required
-                  />
-                </div>
-
-                <div className="group">
-                  <label className="block text-base font-medium text-slate-700 mb-2 group-hover:text-blue-500 transition-colors">Category</label>
-                  <select
-                    value={formData.category}
-                    onChange={(e) => setFormData(prev => ({ ...prev, category: e.target.value }))}
-                    className="block w-full rounded-lg bg-slate-50 border-slate-200 px-4 py-3 focus:border-blue-500 focus:ring-blue-500/50 hover:border-blue-400 transition-all duration-200"
-                  >
-                    {categories.map(category => (
-                      <option key={category.id} value={category.id}>
-                        {category.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div className="group">
-                  <label className="block text-base font-medium text-slate-700 mb-2 group-hover:text-blue-500 transition-colors">Difficulty</label>
-                  <select
-                    value={formData.difficulty}
-                    onChange={(e) => setFormData(prev => ({ ...prev, difficulty: e.target.value }))}
-                    className="block w-full rounded-lg bg-slate-50 border-slate-200 px-4 py-3 focus:border-blue-500 focus:ring-blue-500/50 hover:border-blue-400 transition-all duration-200"
-                  >
-                    {difficultyLevels.map(level => (
-                      <option key={level.id} value={level.id}>
-                        {level.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div className="group">
-                  <label className="block text-base font-medium text-slate-700 mb-2 group-hover:text-blue-500 transition-colors">
-                    Estimated Hours
-                  </label>
-                  <input
-                    type="number"
-                    value={formData.estimatedHours}
-                    onChange={(e) => setFormData(prev => ({ ...prev, estimatedHours: e.target.value }))}
-                    className="block w-full rounded-lg bg-slate-50 border-slate-200 px-4 py-3 focus:border-blue-500 focus:ring-blue-500/50 hover:border-blue-400 transition-all duration-200"
-                    min="1"
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-6">
-                <div className="group">
-                  <label className="block text-base font-medium text-slate-700 mb-2 group-hover:text-blue-500 transition-colors">
-                    Brief Description
-                  </label>
-                  <textarea
-                    value={formData.description}
-                    onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
-                    className="block w-full rounded-lg bg-slate-50 border-slate-200 px-4 py-3 focus:border-blue-500 focus:ring-blue-500/50 hover:border-blue-400 transition-all duration-200"
-                    rows="4"
-                    required
-                  />
-                </div>
-
-                <div className="group">
-                  <label className="block text-base font-medium text-slate-700 mb-2 group-hover:text-blue-500 transition-colors">
-                    Tags (comma-separated)
-                  </label>
-                  <input
-                    type="text"
-                    value={formData.tags}
-                    onChange={(e) => setFormData(prev => ({ ...prev, tags: e.target.value }))}
-                    className="block w-full rounded-lg bg-slate-50 border-slate-200 px-4 py-3 focus:border-blue-500 focus:ring-blue-500/50 hover:border-blue-400 transition-all duration-200"
-                    placeholder="e.g. python, beginner, web"
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* Prerequisites */}
-            <div className="space-y-4">
-              <div className="flex justify-between items-center group">
-                <label className="block text-base font-medium text-slate-700 group-hover:text-blue-500 transition-colors">Prerequisites</label>
-                <button
-                  type="button"
-                  onClick={addPrerequisite}
-                  className="px-4 py-2 bg-blue-50 hover:bg-blue-100 text-blue-600 rounded-lg text-sm font-medium transition-all duration-200 hover:scale-105 active:scale-95"
-                >
-                  Add Prerequisite
-                </button>
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {formData.prerequisites.map((prereq, index) => (
-                  <input
-                    key={index}
                     type="text"
                     value={prereq}
-                    onChange={(e) => updatePrerequisite(index, e.target.value)}
-                    className="block w-full rounded-lg bg-slate-50 border-slate-200 px-4 py-3 focus:border-blue-500 focus:ring-blue-500/50 hover:border-blue-400 transition-all duration-200"
+                    onChange={(e) => handlePrerequisiteChange(index, e.target.value)}
                     placeholder="Enter prerequisite"
+                    className="flex-1 rounded-md border border-gray-300 py-2 px-3 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
                   />
-                ))}
-              </div>
-            </div>
-
-            {/* Learning Objectives */}
-            <div className="space-y-4">
-              <div className="flex justify-between items-center group">
-                <label className="block text-base font-medium text-slate-700 group-hover:text-blue-500 transition-colors">Learning Objectives</label>
-                <button
-                  type="button"
-                  onClick={addObjective}
-                  className="px-4 py-2 bg-blue-50 hover:bg-blue-100 text-blue-600 rounded-lg text-sm font-medium transition-all duration-200 hover:scale-105 active:scale-95"
-                >
-                  Add Objective
-                </button>
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {formData.learningObjectives.map((objective, index) => (
-                  <input
-                    key={index}
-                    type="text"
-                    value={objective}
-                    onChange={(e) => updateObjective(index, e.target.value)}
-                    className="block w-full rounded-lg bg-slate-50 border-slate-200 px-4 py-3 focus:border-blue-500 focus:ring-blue-500/50 hover:border-blue-400 transition-all duration-200"
-                    placeholder="Enter learning objective"
-                  />
-                ))}
-              </div>
-            </div>
-
-            {/* Project Steps */}
-            <div className="space-y-4">
-              <div className="flex justify-between items-center">
-                <h3 className="text-lg font-semibold text-slate-800">Project Steps</h3>
-                <button
-                  type="button"
-                  onClick={addStep}
-                  className="px-4 py-2 text-sm bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
-                >
-                  Add Step
-                </button>
-              </div>
-
-              {formData.steps.map((step, index) => (
-                <div
-                  key={index}
-                  className="p-6 bg-white rounded-xl border border-slate-200 shadow-sm space-y-4"
-                >
-                  <div className="flex justify-between items-center">
-                    <h4 className="font-semibold text-slate-700">Step {index + 1}</h4>
-                    {formData.steps.length > 1 && (
-                      <button
-                        type="button"
-                        onClick={() => removeStep(index)}
-                        className="text-red-500 hover:text-red-600 transition-colors"
-                      >
-                        Remove
-                      </button>
-                    )}
-                  </div>
-
-                  {/* Step Title */}
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-2">
-                      Step Title
-                    </label>
-                    <input
-                      type="text"
-                      value={step.title}
-                      onChange={(e) => handleStepChange(index, 'title', e.target.value)}
-                      className="w-full px-4 py-2 rounded-lg border border-slate-300 focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
-                      placeholder="Enter step title"
-                    />
-                  </div>
-
-                  {/* Step Description */}
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-2">
-                      Step Description
-                    </label>
-                    <textarea
-                      value={step.description}
-                      onChange={(e) => handleStepChange(index, 'description', e.target.value)}
-                      className="w-full px-4 py-2 rounded-lg border border-slate-300 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 min-h-[100px]"
-                      placeholder="Enter step description"
-                    />
-                  </div>
-
-                  {/* Step Hint */}
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-2">
-                      Step Hint
-                    </label>
-                    <textarea
-                      value={step.hint}
-                      onChange={(e) => handleStepChange(index, 'hint', e.target.value)}
-                      className="w-full px-4 py-2 rounded-lg border border-slate-300 focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
-                      placeholder="Enter helpful hint for this step"
-                    />
-                    <p className="mt-1 text-sm text-slate-500">
-                      Provide a helpful hint that students can use if they get stuck on this step.
-                    </p>
-                  </div>
-
-                  {/* Step Tips */}
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-2">
-                      Pro Tips
-                    </label>
-                    <div className="space-y-2">
-                      {Array.isArray(step.tips) && step.tips.map((tip, tipIndex) => (
-                        <div key={tipIndex} className="flex gap-2">
-                          <input
-                            type="text"
-                            value={tip}
-                            onChange={(e) => {
-                              const newTips = [...step.tips];
-                              newTips[tipIndex] = e.target.value;
-                              handleStepChange(index, 'tips', newTips);
-                            }}
-                            className="flex-1 px-4 py-2 rounded-lg border border-slate-300 focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
-                            placeholder="Enter a pro tip"
-                          />
-                          <button
-                            type="button"
-                            onClick={() => {
-                              const newTips = step.tips.filter((_, i) => i !== tipIndex);
-                              handleStepChange(index, 'tips', newTips);
-                            }}
-                            className="px-3 py-2 text-red-500 hover:text-red-600 transition-colors"
-                          >
-                            ×
-                          </button>
-                        </div>
-                      ))}
-                      <button
-                        type="button"
-                        onClick={() => {
-                          const newTips = Array.isArray(step.tips) ? [...step.tips, ''] : [''];
-                          handleStepChange(index, 'tips', newTips);
-                        }}
-                        className="text-sm text-blue-500 hover:text-blue-600 transition-colors"
-                      >
-                        + Add Pro Tip
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Step Code */}
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-2">
-                      Step Code
-                    </label>
-                    <div className="border border-slate-300 rounded-lg overflow-hidden">
-                      <Editor
-                        height="200px"
-                        defaultLanguage="javascript"
-                        theme="vs-dark"
-                        value={step.code}
-                        onChange={(value) => handleStepChange(index, 'code', value)}
-                        options={{
-                          minimap: { enabled: false },
-                          scrollBeyondLastLine: false,
-                          fontSize: 14,
-                          lineNumbers: 'on',
-                          wordWrap: 'on',
-                        }}
-                      />
-                    </div>
-                    <p className="mt-1 text-sm text-slate-500">
-                      Add the code implementation for this step (optional)
-                    </p>
-                  </div>
+                  <button
+                    type="button"
+                    onClick={() => removePrerequisite(index)}
+                    className="px-3 py-2 text-red-600 hover:text-red-700"
+                  >
+                    Remove
+                  </button>
                 </div>
               ))}
+              <button
+                type="button"
+                onClick={addPrerequisite}
+                className="text-blue-600 hover:text-blue-700"
+              >
+                + Add Prerequisite
+              </button>
             </div>
           </div>
-        ) : (
-          <ProjectContent
-            content={formData.content}
-            onChange={(content) => setFormData(prev => ({ ...prev, content }))}
-          />
-        )}
 
-        <div className="flex justify-end space-x-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Steps
+            </label>
+            <div className="space-y-4">
+              {formData.steps.map((step, index) => (
+                <div key={index} className="border border-gray-200 rounded-lg p-4 space-y-2">
+                  <div className="flex justify-between items-center">
+                    <h4 className="font-medium">Step {index + 1}</h4>
+                    <button
+                      type="button"
+                      onClick={() => removeStep(index)}
+                      className="text-red-600 hover:text-red-700"
+                    >
+                      Remove Step
+                    </button>
+                  </div>
+                  <input
+                    type="text"
+                    value={step.title}
+                    onChange={(e) => handleStepChange(index, 'title', e.target.value)}
+                    placeholder="Step title"
+                    className="block w-full rounded-md border border-gray-300 py-2 px-3 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                  />
+                  <textarea
+                    value={step.description}
+                    onChange={(e) => handleStepChange(index, 'description', e.target.value)}
+                    placeholder="Step description"
+                    rows={3}
+                    className="block w-full rounded-md border border-gray-300 py-2 px-3 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                  />
+                  <input
+                    type="number"
+                    value={step.points}
+                    onChange={(e) => handleStepChange(index, 'points', parseInt(e.target.value))}
+                    placeholder="Points for this step"
+                    min="0"
+                    className="block w-full rounded-md border border-gray-300 py-2 px-3 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                  />
+                </div>
+              ))}
+              <button
+                type="button"
+                onClick={addStep}
+                className="text-blue-600 hover:text-blue-700"
+              >
+                + Add Step
+              </button>
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Resources
+            </label>
+            <div className="space-y-2">
+              {formData.resources.map((resource, index) => (
+                <div key={index} className="flex gap-2">
+                  <input
+                    type="text"
+                    value={resource.title}
+                    onChange={(e) => handleResourceChange(index, 'title', e.target.value)}
+                    placeholder="Resource title"
+                    className="flex-1 rounded-md border border-gray-300 py-2 px-3 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                  />
+                  <input
+                    type="url"
+                    value={resource.url}
+                    onChange={(e) => handleResourceChange(index, 'url', e.target.value)}
+                    placeholder="Resource URL"
+                    className="flex-1 rounded-md border border-gray-300 py-2 px-3 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => removeResource(index)}
+                    className="px-3 py-2 text-red-600 hover:text-red-700"
+                  >
+                    Remove
+                  </button>
+                </div>
+              ))}
+              <button
+                type="button"
+                onClick={addResource}
+                className="text-blue-600 hover:text-blue-700"
+              >
+                + Add Resource
+              </button>
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Learning Objectives
+            </label>
+            <div className="space-y-2">
+              {formData.learning_objectives.map((objective, index) => (
+                <div key={index} className="flex gap-2">
+                  <input
+                    type="text"
+                    value={objective}
+                    onChange={(e) => handleLearningObjectiveChange(index, e.target.value)}
+                    placeholder="Enter learning objective"
+                    className="flex-1 rounded-md border border-gray-300 py-2 px-3 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => removeLearningObjective(index)}
+                    className="px-3 py-2 text-red-600 hover:text-red-700"
+                  >
+                    Remove
+                  </button>
+                </div>
+              ))}
+              <button
+                type="button"
+                onClick={addLearningObjective}
+                className="text-blue-600 hover:text-blue-700"
+              >
+                + Add Learning Objective
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div className="flex justify-end gap-4">
           <button
             type="button"
-            onClick={() => onComplete()}
-            className="px-6 py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg font-medium transition-all duration-200 hover:scale-105 active:scale-95"
+            onClick={onCancel}
+            className="px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50"
           >
             Cancel
           </button>
           <button
             type="submit"
             disabled={loading}
-            className="px-6 py-3 bg-blue-500 hover:bg-blue-600 text-white rounded-lg font-medium transition-all duration-200 hover:scale-105 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+            className={`px-4 py-2 text-white bg-blue-500 rounded-lg hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${
+              loading ? 'opacity-50 cursor-not-allowed' : ''
+            }`}
           >
-            {loading ? 'Saving...' : (project?.id ? 'Update Project' : 'Create Project')}
+            {loading ? 'Saving...' : project ? 'Update Project' : 'Create Project'}
           </button>
         </div>
       </form>

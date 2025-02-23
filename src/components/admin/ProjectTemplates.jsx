@@ -33,11 +33,11 @@ export function ProjectTemplates({ onUseTemplate }) {
         description: '',  // Leave empty for user to fill
         difficulty: template.difficulty || 'beginner',
         category: template.category || 'frontend',
-        estimatedHours: template.estimatedHours || 0,
+        estimated_hours: template.estimated_hours || 0,
         tags: [], // Initialize as empty array, will be filled by user
         steps: template.steps || [],
         prerequisites: [],
-        learningObjectives: [],
+        learning_objectives: [],
         resources: [],
         content: {
           description: '',
@@ -97,7 +97,7 @@ export function ProjectTemplates({ onUseTemplate }) {
                 {template.difficulty.charAt(0).toUpperCase() + template.difficulty.slice(1)}
               </span>
               <span className="px-3 py-1 bg-slate-100 text-slate-600 rounded-full text-sm">
-                {template.estimatedHours} hours
+                {template.estimated_hours} hours
               </span>
             </div>
 

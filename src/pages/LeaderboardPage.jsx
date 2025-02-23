@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
-import { db } from '../config/firebase';
-import { collection, query, getDocs, where, orderBy, writeBatch, doc, getDoc } from 'firebase/firestore';
+import { supabase } from '../config/supabase';
 import { useNavigate } from 'react-router-dom';
 
 export function LeaderboardPage() {
@@ -17,125 +16,86 @@ export function LeaderboardPage() {
 
   const updateUserBadges = async (rankedUsers) => {
     try {
-      const batch = writeBatch(db);
-      const usersToUpdate = new Set();
-
       // Get all users who currently have rank badges
-      const usersWithBadgesQuery = query(
-        collection(db, 'users'),
-        where('badges', 'array-contains-any', Object.values(RANK_BADGES))
-      );
-      const usersWithBadgesSnapshot = await getDocs(usersWithBadgesQuery);
+      const { data: usersWithBadges, error: fetchError } = await supabase
+        .from('users')
+        .select('*')
+        .contains('badges', Object.values(RANK_BADGES));
+
+      if (fetchError) throw fetchError;
 
       // Remove rank badges from users who no longer have them
-      usersWithBadgesSnapshot.forEach(userDoc => {
-        const userData = userDoc.data();
-        const badges = userData.badges || [];
+      for (const user of usersWithBadges) {
+        const badges = user.badges || [];
         const updatedBadges = badges.filter(badge => !Object.values(RANK_BADGES).includes(badge));
         
         if (badges.length !== updatedBadges.length) {
-          batch.update(doc(db, 'users', userDoc.id), { badges: updatedBadges });
-          usersToUpdate.add(userDoc.id);
+          const { error: updateError } = await supabase
+            .from('users')
+            .update({ badges: updatedBadges })
+            .eq('id', user.id);
+          
+          if (updateError) throw updateError;
         }
-      });
+      }
 
       // Add rank badges to top 3 users
       const top3Users = rankedUsers.slice(0, 3);
-      await Promise.all(top3Users.map(async (user, index) => {
-        if (!user) return;
+      for (const [index, user] of top3Users.entries()) {
+        if (!user) continue;
 
-        const userRef = doc(db, 'users', user.id);
-        const rankBadge = RANK_BADGES[index];
+        const { data: userData, error: userError } = await supabase
+          .from('users')
+          .select('badges')
+          .eq('id', user.id)
+          .single();
+
+        if (userError) throw userError;
+
+        const currentBadges = userData?.badges || [];
+        const newBadge = RANK_BADGES[index];
         
-        if (usersToUpdate.has(user.id)) {
-          // User document will be updated, add the new badge to their updated badges
-          const existingBadges = usersWithBadgesSnapshot.docs
-            .find(doc => doc.id === user.id)
-            ?.data()
-            ?.badges || [];
-          const updatedBadges = [...new Set([...existingBadges.filter(b => !Object.values(RANK_BADGES).includes(b)), rankBadge])];
-          batch.update(userRef, { badges: updatedBadges });
-        } else {
-          // Get the current user data to preserve existing badges
-          const userDoc = await getDoc(userRef);
-          const currentBadges = userDoc.exists() ? (userDoc.data().badges || []) : [];
-          
-          // Filter out any existing rank badges and add the new one
-          const updatedBadges = [
-            ...currentBadges.filter(badge => !Object.values(RANK_BADGES).includes(badge)),
-            rankBadge
-          ];
-          
-          batch.update(userRef, {
-            badges: updatedBadges
-          });
+        if (!currentBadges.includes(newBadge)) {
+          const { error: updateError } = await supabase
+            .from('users')
+            .update({
+              badges: [...currentBadges, newBadge]
+            })
+            .eq('id', user.id);
+
+          if (updateError) throw updateError;
         }
-      }));
-
-      await batch.commit();
-      console.log('Successfully updated user badges');
-    } catch (err) {
-      console.error('Error updating badges:', err);
-    }
-  };
-
-  const fetchLeaderboardData = async () => {
-    try {
-      setLoading(true);
-      setError('');
-      console.log('Fetching leaderboard data...');
-      
-      // Get all non-admin users (students)
-      const usersQuery = query(
-        collection(db, 'users'),
-        where('isAdmin', '==', false)
-      );
-      const usersSnapshot = await getDocs(usersQuery);
-      console.log('Found users:', usersSnapshot.size);
-      
-      // Process user data and calculate rankings
-      const leaderboard = usersSnapshot.docs
-        .map(doc => {
-          const userData = doc.data();
-          console.log('User data:', userData);
-
-          // Calculate total points from projectProgress
-          const projectProgress = userData.projectProgress || {};
-          const totalPoints = Object.values(projectProgress).reduce((sum, progress) => sum + (progress || 0), 0);
-          
-          return {
-            id: doc.id,
-            displayName: userData.displayName || 'Anonymous User',
-            completedProjects: (userData.completedProjects || []).length,
-            totalPoints: totalPoints,
-            badges: userData.badges || []
-          };
-        })
-        .sort((a, b) => {
-          // Sort by completed projects first
-          if (b.completedProjects !== a.completedProjects) {
-            return b.completedProjects - a.completedProjects;
-          }
-          // If equal, sort by total points
-          return b.totalPoints - a.totalPoints;
-        })
-        .slice(0, 10); // Only show top 10
-
-      // Update badges for top 3 users
-      await updateUserBadges(leaderboard);
-
-      console.log('Final leaderboard data:', leaderboard);
-      setLeaderboardData(leaderboard);
-    } catch (err) {
-      console.error('Leaderboard error:', err);
-      setError('Failed to fetch leaderboard data. Please try again later.');
-    } finally {
-      setLoading(false);
+      }
+    } catch (error) {
+      console.error('Error updating badges:', error);
+      throw error;
     }
   };
 
   useEffect(() => {
-    fetchLeaderboardData();
+    const fetchLeaderboard = async () => {
+      try {
+        setLoading(true);
+        setError('');
+
+        const { data: users, error } = await supabase
+          .from('users')
+          .select('*')
+          .order('total_points', { ascending: false });
+
+        if (error) throw error;
+
+        setLeaderboardData(users);
+        await updateUserBadges(users);
+      } catch (err) {
+        console.error('Error fetching leaderboard:', err);
+        setError(err.message);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchLeaderboard();
   }, []);
 
   const handleBack = () => {
@@ -269,7 +229,9 @@ export function LeaderboardPage() {
                   </svg>
                   <p className="text-lg font-medium">{error}</p>
                   <button 
-                    onClick={fetchLeaderboardData}
+                    onClick={() => {
+                      // Implement the logic to fetch leaderboard data again
+                    }}
                     className="mt-2 px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 transition-colors"
                   >
                     Try Again

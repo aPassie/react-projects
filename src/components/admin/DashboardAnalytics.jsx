@@ -1,40 +1,19 @@
 import { useState, useEffect } from 'react';
-import { db, collection, getDocs, query, orderBy } from '../../config/firebase';
-import { Line, Bar } from 'react-chartjs-2';
-import {
-  Chart as ChartJS,
-  CategoryScale,
-  LinearScale,
-  PointElement,
-  LineElement,
-  BarElement,
-  Title,
-  Tooltip,
-  Legend
-} from 'chart.js';
+import { supabase } from '../../config/supabase';
+import { Chart as ChartJS, ArcElement, Tooltip, Legend } from 'chart.js';
+import { Pie } from 'react-chartjs-2';
 
-// Register ChartJS components
-ChartJS.register(
-  CategoryScale,
-  LinearScale,
-  PointElement,
-  LineElement,
-  BarElement,
-  Title,
-  Tooltip,
-  Legend
-);
+ChartJS.register(ArcElement, Tooltip, Legend);
 
 export function DashboardAnalytics() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [analytics, setAnalytics] = useState({
+  const [stats, setStats] = useState({
     totalStudents: 0,
     totalProjects: 0,
-    completionRate: 0,
-    popularProjects: [],
-    studentActivity: {},
-    projectDifficulty: {
+    completedProjects: 0,
+    averageProgress: 0,
+    difficultyDistribution: {
       beginner: 0,
       intermediate: 0,
       advanced: 0
@@ -42,216 +21,136 @@ export function DashboardAnalytics() {
   });
 
   useEffect(() => {
+    const fetchAnalytics = async () => {
+      try {
+        setLoading(true);
+
+        // Fetch total students
+        const { count: studentsCount, error: studentsError } = await supabase
+          .from('users')
+          .select('*', { count: 'exact' })
+          .eq('is_admin', false);
+
+        if (studentsError) throw studentsError;
+
+        // Fetch projects and their stats
+        const { data: projects, error: projectsError } = await supabase
+          .from('projects')
+          .select('*');
+
+        if (projectsError) throw projectsError;
+
+        // Fetch project progress
+        const { data: progress, error: progressError } = await supabase
+          .from('project_progress')
+          .select('*');
+
+        if (progressError) throw progressError;
+
+        // Calculate statistics
+        const completedProjects = progress?.filter(p => p.completed)?.length || 0;
+        const totalProgress = progress?.reduce((sum, p) => sum + (p.progress || 0), 0);
+        const averageProgress = progress?.length ? Math.round(totalProgress / progress.length) : 0;
+
+        // Calculate difficulty distribution
+        const difficultyDistribution = projects.reduce((acc, project) => {
+          const difficulty = project.difficulty?.toLowerCase() || 'beginner';
+          acc[difficulty] = (acc[difficulty] || 0) + 1;
+          return acc;
+        }, {
+          beginner: 0,
+          intermediate: 0,
+          advanced: 0
+        });
+
+        setStats({
+          totalStudents: studentsCount || 0,
+          totalProjects: projects.length,
+          completedProjects,
+          averageProgress,
+          difficultyDistribution
+        });
+
+      } catch (err) {
+        console.error('Error fetching analytics:', err);
+        setError(err.message);
+      } finally {
+        setLoading(false);
+      }
+    };
+
     fetchAnalytics();
   }, []);
 
-  const fetchAnalytics = async () => {
-    try {
-      setLoading(true);
-      
-      // Fetch all students
-      const studentsQuery = query(collection(db, 'users'), orderBy('createdAt', 'desc'));
-      const studentsSnapshot = await getDocs(studentsQuery);
-      const students = studentsSnapshot.docs
-        .map(doc => ({ id: doc.id, ...doc.data() }))
-        .filter(user => !user.isAdmin);
-
-      // Fetch all projects
-      const projectsQuery = query(collection(db, 'projects'), orderBy('createdAt', 'desc'));
-      const projectsSnapshot = await getDocs(projectsQuery);
-      const projects = projectsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-
-      // Calculate total completions
-      const totalCompletions = students.reduce((sum, student) => 
-        sum + (student.completedProjects?.length || 0), 0);
-
-      // Calculate project popularity
-      const projectCompletions = {};
-      students.forEach(student => {
-        student.completedProjects?.forEach(projectId => {
-          projectCompletions[projectId] = (projectCompletions[projectId] || 0) + 1;
-        });
-      });
-
-      // Calculate student activity over time
-      const activityData = {};
-      students.forEach(student => {
-        const date = new Date(student.createdAt).toLocaleDateString();
-        activityData[date] = (activityData[date] || 0) + 1;
-      });
-
-      // Calculate project difficulty distribution
-      const difficultyCount = projects.reduce((acc, project) => {
-        acc[project.difficulty] = (acc[project.difficulty] || 0) + 1;
-        return acc;
-      }, {});
-
-      setAnalytics({
-        totalStudents: students.length,
-        totalProjects: projects.length,
-        completionRate: students.length ? 
-          (totalCompletions / (students.length * projects.length) * 100).toFixed(1) : 0,
-        popularProjects: projects
-          .map(project => ({
-            ...project,
-            completions: projectCompletions[project.id] || 0
-          }))
-          .sort((a, b) => b.completions - a.completions)
-          .slice(0, 5),
-        studentActivity: activityData,
-        projectDifficulty: difficultyCount
-      });
-
-    } catch (err) {
-      setError('Failed to fetch analytics: ' + err.message);
-    } finally {
-      setLoading(false);
-    }
+  const chartData = {
+    labels: ['Beginner', 'Intermediate', 'Advanced'],
+    datasets: [
+      {
+        data: [
+          stats.difficultyDistribution.beginner,
+          stats.difficultyDistribution.intermediate,
+          stats.difficultyDistribution.advanced
+        ],
+        backgroundColor: [
+          'rgba(52, 211, 153, 0.8)',  // Green for Beginner
+          'rgba(251, 191, 36, 0.8)',  // Yellow for Intermediate
+          'rgba(239, 68, 68, 0.8)'    // Red for Advanced
+        ],
+        borderColor: [
+          'rgba(52, 211, 153, 1)',
+          'rgba(251, 191, 36, 1)',
+          'rgba(239, 68, 68, 1)'
+        ],
+        borderWidth: 1,
+      },
+    ],
   };
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center py-8 animate-pulse">
-        <div className="text-slate-600">Loading analytics...</div>
+      <div className="flex justify-center items-center h-64">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="bg-red-100 border border-red-400 text-red-700 p-4 rounded-lg animate-fade-in">
-        {error}
+      <div className="text-red-500 p-4 bg-red-100 rounded-lg">
+        Error loading analytics: {error}
       </div>
     );
   }
 
   return (
-    <div className="grid gap-6">
-      {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="bg-white p-6 rounded-lg border border-slate-200 shadow-sm hover:shadow-md transition-all duration-200 hover:-translate-y-1">
-          <h3 className="text-lg font-medium text-slate-600">Total Students</h3>
-          <p className="text-3xl font-bold mt-2 text-slate-800">{analytics.totalStudents}</p>
+    <div className="space-y-8">
+      {/* Stats Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="bg-white p-6 rounded-lg shadow-sm border border-slate-200">
+          <h3 className="text-slate-500 text-sm font-medium">Total Students</h3>
+          <p className="text-3xl font-bold text-slate-900 mt-2">{stats.totalStudents}</p>
         </div>
-        <div className="bg-white p-6 rounded-lg border border-slate-200 shadow-sm hover:shadow-md transition-all duration-200 hover:-translate-y-1">
-          <h3 className="text-lg font-medium text-slate-600">Total Projects</h3>
-          <p className="text-3xl font-bold mt-2 text-slate-800">{analytics.totalProjects}</p>
+        <div className="bg-white p-6 rounded-lg shadow-sm border border-slate-200">
+          <h3 className="text-slate-500 text-sm font-medium">Total Projects</h3>
+          <p className="text-3xl font-bold text-slate-900 mt-2">{stats.totalProjects}</p>
         </div>
-        <div className="bg-white p-6 rounded-lg border border-slate-200 shadow-sm hover:shadow-md transition-all duration-200 hover:-translate-y-1">
-          <h3 className="text-lg font-medium text-slate-600">Completion Rate</h3>
-          <p className="text-3xl font-bold mt-2 text-slate-800">{analytics.completionRate}%</p>
+        <div className="bg-white p-6 rounded-lg shadow-sm border border-slate-200">
+          <h3 className="text-slate-500 text-sm font-medium">Completed Projects</h3>
+          <p className="text-3xl font-bold text-slate-900 mt-2">{stats.completedProjects}</p>
         </div>
-      </div>
-
-      {/* Popular Projects */}
-      <div className="bg-white p-6 rounded-lg border border-slate-200 shadow-sm hover:shadow-md transition-all duration-200">
-        <h3 className="text-xl font-semibold text-slate-800 mb-4">Most Popular Projects</h3>
-        <div className="space-y-4">
-          {analytics.popularProjects.map(project => (
-            <div 
-              key={project.id} 
-              className="flex justify-between items-center p-4 rounded-lg bg-slate-50 hover:bg-slate-100 transition-colors duration-200"
-            >
-              <div>
-                <h4 className="font-medium text-slate-800">{project.title}</h4>
-                <p className="text-sm text-slate-600">{project.difficulty}</p>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="text-lg font-bold text-slate-800">{project.completions}</span>
-                <span className="text-sm text-slate-600">completions</span>
-              </div>
-            </div>
-          ))}
+        <div className="bg-white p-6 rounded-lg shadow-sm border border-slate-200">
+          <h3 className="text-slate-500 text-sm font-medium">Average Progress</h3>
+          <p className="text-3xl font-bold text-slate-900 mt-2">{stats.averageProgress}%</p>
         </div>
       </div>
 
-      {/* Student Activity Graph */}
-      <div className="bg-white p-6 rounded-lg border border-slate-200 shadow-sm hover:shadow-md transition-all duration-200">
-        <h3 className="text-xl font-semibold text-slate-800 mb-4">Student Activity</h3>
-        <div className="h-64">
-          <Line
-            data={{
-              labels: Object.keys(analytics.studentActivity),
-              datasets: [{
-                label: 'New Students',
-                data: Object.values(analytics.studentActivity),
-                borderColor: 'rgb(59, 130, 246)',
-                backgroundColor: 'rgba(59, 130, 246, 0.1)',
-                tension: 0.4,
-                fill: true
-              }]
-            }}
-            options={{
-              responsive: true,
-              maintainAspectRatio: false,
-              scales: {
-                y: {
-                  beginAtZero: true,
-                  grid: {
-                    color: 'rgba(148, 163, 184, 0.1)',
-                  },
-                  ticks: { color: '#64748b' }
-                },
-                x: {
-                  grid: {
-                    color: 'rgba(148, 163, 184, 0.1)',
-                  },
-                  ticks: { color: '#64748b' }
-                }
-              },
-              plugins: {
-                legend: {
-                  labels: { color: '#64748b' }
-                }
-              }
-            }}
-          />
-        </div>
-      </div>
-
-      {/* Project Difficulty Distribution */}
-      <div className="bg-white p-6 rounded-lg border border-slate-200 shadow-sm hover:shadow-md transition-all duration-200">
-        <h3 className="text-xl font-semibold text-slate-800 mb-4">Project Difficulty Distribution</h3>
-        <div className="h-64">
-          <Bar
-            data={{
-              labels: Object.keys(analytics.projectDifficulty),
-              datasets: [{
-                label: 'Projects',
-                data: Object.values(analytics.projectDifficulty),
-                backgroundColor: [
-                  'rgba(34, 197, 94, 0.8)',  // green for beginner
-                  'rgba(59, 130, 246, 0.8)', // blue for intermediate
-                  'rgba(249, 115, 22, 0.8)'  // orange for advanced
-                ],
-                borderRadius: 8
-              }]
-            }}
-            options={{
-              responsive: true,
-              maintainAspectRatio: false,
-              scales: {
-                y: {
-                  beginAtZero: true,
-                  grid: {
-                    color: 'rgba(148, 163, 184, 0.1)',
-                  },
-                  ticks: { color: '#64748b' }
-                },
-                x: {
-                  grid: {
-                    display: false
-                  },
-                  ticks: { color: '#64748b' }
-                }
-              },
-              plugins: {
-                legend: {
-                  labels: { color: '#64748b' }
-                }
-              }
-            }}
-          />
+      {/* Charts */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="bg-white p-6 rounded-lg shadow-sm border border-slate-200">
+          <h3 className="text-slate-700 font-semibold mb-4">Project Difficulty Distribution</h3>
+          <div className="w-full max-w-md mx-auto">
+            <Pie data={chartData} options={{ maintainAspectRatio: true }} />
+          </div>
         </div>
       </div>
     </div>

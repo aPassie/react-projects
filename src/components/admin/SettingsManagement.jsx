@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { db, collection, doc, getDoc, setDoc } from '../../config/firebase';
+import { supabase } from '../../config/supabase';
 
 export function SettingsManagement() {
   const [settings, setSettings] = useState({
@@ -18,15 +18,19 @@ export function SettingsManagement() {
 
   const fetchSettings = async () => {
     try {
-      const settingsDoc = await getDoc(doc(db, 'settings', 'global'));
-      if (settingsDoc.exists()) {
-        const data = settingsDoc.data();
-        setSettings({
-          projectTags: data.projectTags || [],
-          difficultyLevels: data.difficultyLevels || [],
-          achievementBadges: data.achievementBadges || []
-        });
-      }
+      const { data: settingsData, error: settingsError } = await supabase
+        .from('settings')
+        .select('*')
+        .eq('id', 'global')
+        .single();
+
+      if (settingsError) throw settingsError;
+
+      setSettings({
+        projectTags: settingsData.project_tags || [],
+        difficultyLevels: settingsData.difficulty_levels || [],
+        achievementBadges: settingsData.achievement_badges || []
+      });
     } catch (err) {
       setError('Failed to fetch settings: ' + err.message);
     } finally {
@@ -38,7 +42,19 @@ export function SettingsManagement() {
     try {
       setError('');
       setSuccess('');
-      await setDoc(doc(db, 'settings', 'global'), settings);
+
+      const { error: updateError } = await supabase
+        .from('settings')
+        .update({
+          project_tags: settings.projectTags,
+          difficulty_levels: settings.difficultyLevels,
+          achievement_badges: settings.achievementBadges,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', 'global');
+
+      if (updateError) throw updateError;
+
       setSuccess('Settings saved successfully!');
     } catch (err) {
       setError('Failed to save settings: ' + err.message);
@@ -72,279 +88,248 @@ export function SettingsManagement() {
         name: '',
         description: '',
         icon: '🏆',
-        requirement: '',
-        points: 0
+        requiredPoints: 0
       }]
+    }));
+  };
+
+  const updateTag = (index, field, value) => {
+    setSettings(prev => ({
+      ...prev,
+      projectTags: prev.projectTags.map((tag, i) => 
+        i === index ? { ...tag, [field]: value } : tag
+      )
+    }));
+  };
+
+  const updateDifficultyLevel = (index, field, value) => {
+    setSettings(prev => ({
+      ...prev,
+      difficultyLevels: prev.difficultyLevels.map((level, i) => 
+        i === index ? { ...level, [field]: value } : level
+      )
+    }));
+  };
+
+  const updateBadge = (index, field, value) => {
+    setSettings(prev => ({
+      ...prev,
+      achievementBadges: prev.achievementBadges.map((badge, i) => 
+        i === index ? { ...badge, [field]: value } : badge
+      )
+    }));
+  };
+
+  const removeTag = (index) => {
+    setSettings(prev => ({
+      ...prev,
+      projectTags: prev.projectTags.filter((_, i) => i !== index)
+    }));
+  };
+
+  const removeDifficultyLevel = (index) => {
+    setSettings(prev => ({
+      ...prev,
+      difficultyLevels: prev.difficultyLevels.filter((_, i) => i !== index)
+    }));
+  };
+
+  const removeBadge = (index) => {
+    setSettings(prev => ({
+      ...prev,
+      achievementBadges: prev.achievementBadges.filter((_, i) => i !== index)
     }));
   };
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center py-8 animate-pulse">
-        <div className="text-slate-600">Loading settings...</div>
+      <div className="flex justify-center items-center h-64">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
       </div>
     );
   }
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex justify-between items-center bg-white p-6 rounded-lg border border-slate-200 shadow-sm">
-        <h2 className="text-xl font-semibold text-slate-800">Settings Management</h2>
-        <button
-          onClick={saveSettings}
-          className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-all duration-200 hover:scale-105 active:scale-95"
-        >
-          Save Changes
-        </button>
-      </div>
-
       {error && (
-        <div className="bg-red-50 border border-red-200 text-red-600 p-4 rounded-lg">
+        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
           {error}
         </div>
       )}
-
       {success && (
-        <div className="bg-green-50 border border-green-200 text-green-600 p-4 rounded-lg">
+        <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded">
           {success}
         </div>
       )}
 
-      {/* Navigation Tabs */}
-      <div className="border-b border-slate-200">
-        {[
-          { id: 'tags', label: 'Tags' },
-          { id: 'difficulty', label: 'Difficulty' },
-          { id: 'badges', label: 'Badges' }
-        ].map(tab => (
-          <button
-            key={tab.id}
-            onClick={() => setActiveTab(tab.id)}
-            className={`px-6 py-3 -mb-px transition-all duration-200 ${
-              activeTab === tab.id
-                ? 'border-b-2 border-blue-500 text-blue-600 font-medium'
-                : 'text-slate-600 hover:text-slate-900'
-            }`}
-          >
-            {tab.label}
-          </button>
-        ))}
+      <div className="flex space-x-4 border-b border-slate-200">
+        <button
+          onClick={() => setActiveTab('tags')}
+          className={`px-4 py-2 -mb-px ${
+            activeTab === 'tags'
+              ? 'border-b-2 border-blue-500 text-blue-600'
+              : 'text-slate-500 hover:text-slate-700'
+          }`}
+        >
+          Project Tags
+        </button>
+        <button
+          onClick={() => setActiveTab('difficulty')}
+          className={`px-4 py-2 -mb-px ${
+            activeTab === 'difficulty'
+              ? 'border-b-2 border-blue-500 text-blue-600'
+              : 'text-slate-500 hover:text-slate-700'
+          }`}
+        >
+          Difficulty Levels
+        </button>
+        <button
+          onClick={() => setActiveTab('badges')}
+          className={`px-4 py-2 -mb-px ${
+            activeTab === 'badges'
+              ? 'border-b-2 border-blue-500 text-blue-600'
+              : 'text-slate-500 hover:text-slate-700'
+          }`}
+        >
+          Achievement Badges
+        </button>
       </div>
 
-      {/* Settings Content */}
-      <div className="bg-white rounded-lg border border-slate-200 shadow-sm p-6">
+      <div className="mt-6">
         {activeTab === 'tags' && (
-          <div className="space-y-6">
-            <div className="flex justify-between items-center">
-              <h3 className="text-lg font-medium text-slate-800">Project Tags</h3>
-              <button
-                onClick={addTag}
-                className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-all duration-200 hover:scale-105 active:scale-95"
-              >
-                Add Tag
-              </button>
-            </div>
-            <div className="space-y-4">
-              {settings.projectTags.map((tag, index) => (
-                <div key={tag.id} className="flex items-center gap-4 p-4 bg-slate-50 rounded-lg border border-slate-200">
-                  <input
-                    type="text"
-                    value={tag.name}
-                    onChange={(e) => {
-                      const newTags = [...settings.projectTags];
-                      newTags[index] = { ...tag, name: e.target.value };
-                      setSettings(prev => ({ ...prev, projectTags: newTags }));
-                    }}
-                    placeholder="Tag name"
-                    className="flex-1 px-4 py-2 bg-white rounded-lg border border-slate-200 focus:border-blue-500 focus:ring-blue-500/50"
-                  />
-                  <input
-                    type="color"
-                    value={tag.color}
-                    onChange={(e) => {
-                      const newTags = [...settings.projectTags];
-                      newTags[index] = { ...tag, color: e.target.value };
-                      setSettings(prev => ({ ...prev, projectTags: newTags }));
-                    }}
-                    className="w-12 h-10 rounded border border-slate-200"
-                  />
-                  <button
-                    onClick={() => {
-                      const newTags = settings.projectTags.filter(t => t.id !== tag.id);
-                      setSettings(prev => ({ ...prev, projectTags: newTags }));
-                    }}
-                    className="p-2 text-red-500 hover:text-red-600 rounded-lg hover:bg-red-50 transition-colors"
-                  >
-                    <span className="sr-only">Delete</span>
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
-                    </svg>
-                  </button>
-                </div>
-              ))}
-            </div>
+          <div className="space-y-4">
+            {settings.projectTags.map((tag, index) => (
+              <div key={tag.id} className="flex items-center space-x-4">
+                <input
+                  type="text"
+                  value={tag.name}
+                  onChange={(e) => updateTag(index, 'name', e.target.value)}
+                  placeholder="Tag name"
+                  className="flex-1 p-2 border rounded"
+                />
+                <input
+                  type="color"
+                  value={tag.color}
+                  onChange={(e) => updateTag(index, 'color', e.target.value)}
+                  className="w-12 h-8"
+                />
+                <button
+                  onClick={() => removeTag(index)}
+                  className="text-red-500 hover:text-red-700"
+                >
+                  Remove
+                </button>
+              </div>
+            ))}
+            <button
+              onClick={addTag}
+              className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+            >
+              Add Tag
+            </button>
           </div>
         )}
 
         {activeTab === 'difficulty' && (
-          <div className="space-y-6">
-            <div className="flex justify-between items-center">
-              <h3 className="text-lg font-medium text-slate-800">Difficulty Levels</h3>
-              <button
-                onClick={addDifficultyLevel}
-                className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-all duration-200 hover:scale-105 active:scale-95"
-              >
-                Add Level
-              </button>
-            </div>
-            <div className="space-y-4">
-              {settings.difficultyLevels.map((level, index) => (
-                <div key={level.id} className="grid grid-cols-3 gap-4 p-4 bg-slate-50 rounded-lg border border-slate-200">
-                  <input
-                    type="text"
-                    value={level.name}
-                    onChange={(e) => {
-                      const newLevels = [...settings.difficultyLevels];
-                      newLevels[index] = { ...level, name: e.target.value };
-                      setSettings(prev => ({ ...prev, difficultyLevels: newLevels }));
-                    }}
-                    placeholder="Level name"
-                    className="px-4 py-2 bg-white rounded-lg border border-slate-200 focus:border-blue-500 focus:ring-blue-500/50"
-                  />
-                  <input
-                    type="number"
-                    value={level.requiredPoints}
-                    onChange={(e) => {
-                      const newLevels = [...settings.difficultyLevels];
-                      newLevels[index] = { ...level, requiredPoints: parseInt(e.target.value) };
-                      setSettings(prev => ({ ...prev, difficultyLevels: newLevels }));
-                    }}
-                    placeholder="Required points"
-                    className="px-4 py-2 bg-white rounded-lg border border-slate-200 focus:border-blue-500 focus:ring-blue-500/50"
-                  />
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="color"
-                      value={level.color}
-                      onChange={(e) => {
-                        const newLevels = [...settings.difficultyLevels];
-                        newLevels[index] = { ...level, color: e.target.value };
-                        setSettings(prev => ({ ...prev, difficultyLevels: newLevels }));
-                      }}
-                      className="w-12 h-10 rounded border border-slate-200"
-                    />
-                    <button
-                      onClick={() => {
-                        const newLevels = settings.difficultyLevels.filter(l => l.id !== level.id);
-                        setSettings(prev => ({ ...prev, difficultyLevels: newLevels }));
-                      }}
-                      className="p-2 text-red-500 hover:text-red-600 rounded-lg hover:bg-red-50 transition-colors ml-auto"
-                    >
-                      <span className="sr-only">Delete</span>
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
-                      </svg>
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
+          <div className="space-y-4">
+            {settings.difficultyLevels.map((level, index) => (
+              <div key={level.id} className="flex items-center space-x-4">
+                <input
+                  type="text"
+                  value={level.name}
+                  onChange={(e) => updateDifficultyLevel(index, 'name', e.target.value)}
+                  placeholder="Level name"
+                  className="flex-1 p-2 border rounded"
+                />
+                <input
+                  type="color"
+                  value={level.color}
+                  onChange={(e) => updateDifficultyLevel(index, 'color', e.target.value)}
+                  className="w-12 h-8"
+                />
+                <input
+                  type="number"
+                  value={level.requiredPoints}
+                  onChange={(e) => updateDifficultyLevel(index, 'requiredPoints', parseInt(e.target.value))}
+                  placeholder="Required points"
+                  className="w-32 p-2 border rounded"
+                />
+                <button
+                  onClick={() => removeDifficultyLevel(index)}
+                  className="text-red-500 hover:text-red-700"
+                >
+                  Remove
+                </button>
+              </div>
+            ))}
+            <button
+              onClick={addDifficultyLevel}
+              className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+            >
+              Add Level
+            </button>
           </div>
         )}
 
         {activeTab === 'badges' && (
-          <div className="space-y-6">
-            <div className="flex justify-between items-center">
-              <h3 className="text-lg font-medium text-slate-800">Achievement Badges</h3>
-              <button
-                onClick={addBadge}
-                className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-all duration-200 hover:scale-105 active:scale-95"
-              >
-                Add Badge
-              </button>
-            </div>
-            <div className="space-y-4">
-              {settings.achievementBadges.map((badge, index) => (
-                <div key={badge.id} className="grid grid-cols-2 gap-4 p-4 bg-slate-50 rounded-lg border border-slate-200">
-                  <div className="space-y-4">
-                    <input
-                      type="text"
-                      value={badge.name}
-                      onChange={(e) => {
-                        const newBadges = [...settings.achievementBadges];
-                        newBadges[index] = { ...badge, name: e.target.value };
-                        setSettings(prev => ({ ...prev, achievementBadges: newBadges }));
-                      }}
-                      placeholder="Badge name"
-                      className="w-full px-4 py-2 bg-white rounded-lg border border-slate-200 focus:border-blue-500 focus:ring-blue-500/50"
-                    />
-                    <input
-                      type="text"
-                      value={badge.description}
-                      onChange={(e) => {
-                        const newBadges = [...settings.achievementBadges];
-                        newBadges[index] = { ...badge, description: e.target.value };
-                        setSettings(prev => ({ ...prev, achievementBadges: newBadges }));
-                      }}
-                      placeholder="Description"
-                      className="w-full px-4 py-2 bg-white rounded-lg border border-slate-200 focus:border-blue-500 focus:ring-blue-500/50"
-                    />
-                  </div>
-                  <div className="space-y-4">
-                    <div className="flex items-center gap-2">
-                      <input
-                        type="text"
-                        value={badge.icon}
-                        onChange={(e) => {
-                          const newBadges = [...settings.achievementBadges];
-                          newBadges[index] = { ...badge, icon: e.target.value };
-                          setSettings(prev => ({ ...prev, achievementBadges: newBadges }));
-                        }}
-                        placeholder="Icon (emoji)"
-                        className="w-20 px-4 py-2 bg-white rounded-lg border border-slate-200 focus:border-blue-500 focus:ring-blue-500/50"
-                      />
-                      <input
-                        type="number"
-                        value={badge.points}
-                        onChange={(e) => {
-                          const newBadges = [...settings.achievementBadges];
-                          newBadges[index] = { ...badge, points: parseInt(e.target.value) };
-                          setSettings(prev => ({ ...prev, achievementBadges: newBadges }));
-                        }}
-                        placeholder="Points"
-                        className="flex-1 px-4 py-2 bg-white rounded-lg border border-slate-200 focus:border-blue-500 focus:ring-blue-500/50"
-                      />
-                      <button
-                        onClick={() => {
-                          const newBadges = settings.achievementBadges.filter(b => b.id !== badge.id);
-                          setSettings(prev => ({ ...prev, achievementBadges: newBadges }));
-                        }}
-                        className="p-2 text-red-500 hover:text-red-600 rounded-lg hover:bg-red-50 transition-colors"
-                      >
-                        <span className="sr-only">Delete</span>
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
-                        </svg>
-                      </button>
-                    </div>
-                    <input
-                      type="text"
-                      value={badge.requirement}
-                      onChange={(e) => {
-                        const newBadges = [...settings.achievementBadges];
-                        newBadges[index] = { ...badge, requirement: e.target.value };
-                        setSettings(prev => ({ ...prev, achievementBadges: newBadges }));
-                      }}
-                      placeholder="Requirement"
-                      className="w-full px-4 py-2 bg-white rounded-lg border border-slate-200 focus:border-blue-500 focus:ring-blue-500/50"
-                    />
-                  </div>
+          <div className="space-y-4">
+            {settings.achievementBadges.map((badge, index) => (
+              <div key={badge.id} className="space-y-2 p-4 border rounded">
+                <div className="flex items-center space-x-4">
+                  <input
+                    type="text"
+                    value={badge.name}
+                    onChange={(e) => updateBadge(index, 'name', e.target.value)}
+                    placeholder="Badge name"
+                    className="flex-1 p-2 border rounded"
+                  />
+                  <input
+                    type="text"
+                    value={badge.icon}
+                    onChange={(e) => updateBadge(index, 'icon', e.target.value)}
+                    placeholder="🏆"
+                    className="w-16 p-2 border rounded"
+                  />
+                  <button
+                    onClick={() => removeBadge(index)}
+                    className="text-red-500 hover:text-red-700"
+                  >
+                    Remove
+                  </button>
                 </div>
-              ))}
-            </div>
+                <input
+                  type="text"
+                  value={badge.description}
+                  onChange={(e) => updateBadge(index, 'description', e.target.value)}
+                  placeholder="Badge description"
+                  className="w-full p-2 border rounded"
+                />
+                <input
+                  type="number"
+                  value={badge.requiredPoints}
+                  onChange={(e) => updateBadge(index, 'requiredPoints', parseInt(e.target.value))}
+                  placeholder="Required points"
+                  className="w-32 p-2 border rounded"
+                />
+              </div>
+            ))}
+            <button
+              onClick={addBadge}
+              className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+            >
+              Add Badge
+            </button>
           </div>
         )}
+      </div>
+
+      <div className="mt-6">
+        <button
+          onClick={saveSettings}
+          className="px-6 py-2 bg-green-500 text-white rounded hover:bg-green-600"
+        >
+          Save Settings
+        </button>
       </div>
     </div>
   );

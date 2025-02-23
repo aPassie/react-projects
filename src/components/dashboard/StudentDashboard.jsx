@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
-import { db, collection, getDocs, query, orderBy, doc, updateDoc, getDoc, where } from '../../config/firebase';
+import { supabase } from '../../config/supabase';
 import { calculateProjectProgress } from '../../utils/progressCalculator';
 import { 
     IoMdTrophy, IoMdTime, IoMdCheckmark, IoMdTrendingUp, 
@@ -9,7 +9,6 @@ import {
 } from 'react-icons/io';
 import { Tooltip } from 'react-tooltip';
 import 'react-tooltip/dist/react-tooltip.css';
-import { getUserStats } from '../../config/database';
 
 export function StudentDashboard() {
     const [error, setError] = useState('');
@@ -37,142 +36,77 @@ export function StudentDashboard() {
     };
 
     useEffect(() => {
-        fetchProjects();
-        fetchUserName();
-        fetchProjectsAndProgress();
-        fetchUserStats();
-        fetchUserRank();
-        const fetchProgress = async () => {
-            if (!currentUser) return;
-            
+        const fetchData = async () => {
             try {
-                const progressRef = collection(db, 'users', currentUser.uid, 'progress');
-                const progressSnapshot = await getDocs(progressRef);
-                const progressData = {};
-                
-                progressSnapshot.forEach(doc => {
-                    progressData[doc.id] = doc.data().progress || 0;
+                setLoading(true);
+
+                // Fetch projects
+                const { data: projectsData, error: projectsError } = await supabase
+                    .from('projects')
+                    .select('*')
+                    .order('created_at', { ascending: false });
+
+                if (projectsError) throw projectsError;
+
+                // Fetch user's progress for all projects
+                const { data: progressData, error: progressError } = await supabase
+                    .from('project_progress')
+                    .select('*')
+                    .eq('user_id', currentUser.id);
+
+                if (progressError) throw progressError;
+
+                // Create progress map
+                const progressMap = {};
+                progressData?.forEach(item => {
+                    progressMap[item.project_id] = item.progress;
                 });
-                
-                setProjectProgress(progressData);
+
+                setProjects(projectsData);
+                setProjectProgress(progressMap);
+
+                // Fetch user stats
+                const { data: userData, error: userError } = await supabase
+                    .from('users')
+                    .select('*')
+                    .eq('id', currentUser.id)
+                    .single();
+
+                if (userError) throw userError;
+
+                setStats({
+                    hoursSpent: userData.total_hours || 0,
+                    projectsDone: userData.completed_projects?.length || 0,
+                    currentStreak: userData.current_streak || 0,
+                    points: userData.total_points || 0
+                });
+
+                // Calculate leaderboard rank
+                const { data: users, error: rankError } = await supabase
+                    .from('users')
+                    .select('id, total_points')
+                    .order('total_points', { ascending: false });
+
+                if (rankError) throw rankError;
+
+                const userRank = users.findIndex(user => user.id === currentUser.id) + 1;
+                setLeaderboardRank({
+                    rank: userRank,
+                    totalUsers: users.length
+                });
+
             } catch (error) {
-                console.error('Error fetching progress:', error);
+                console.error('Error fetching dashboard data:', error);
+                setError(error.message);
+            } finally {
+                setLoading(false);
             }
         };
 
-        fetchProgress();
-    }, [currentUser]);
-
-    useEffect(() => {
-        const fetchStats = async () => {
-            if (!currentUser) return;
-            try {
-                const stats = await getUserStats(currentUser.uid);
-                setStats(stats);
-            } catch (error) {
-                console.error('Error fetching stats:', error);
-            }
-        };
-
-        fetchStats();
-    }, [currentUser]);
-
-    const fetchUserName = async () => {
         if (currentUser) {
-            try {
-                const userDocSnap = await getDocs(query(collection(db, "users")));
-                if (userDocSnap.docs.length > 0) {
-                    const userData = userDocSnap.docs[0].data();
-                    setUserName(userData.name || 'User');
-                }
-            } catch (err) {
-                console.error("Failed to fetch user's name:", err);
-                setUserName('User');
-            }
+            fetchData();
         }
-    };
-
-    const fetchProjects = async () => {
-        try {
-            setLoading(true);
-            const projectsQuery = query(collection(db, 'projects'), orderBy('createdAt', 'desc'));
-            const snapshot = await getDocs(projectsQuery);
-            const projectsData = snapshot.docs.map(doc => ({
-                id: doc.id,
-                ...doc.data()
-            }));
-            setProjects(projectsData);
-        } catch (err) {
-            console.error('Error fetching projects:', err);
-            setError('Failed to load projects');
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    const fetchProjectsAndProgress = async () => {
-        try {
-            // Fetch all projects
-            const projectsSnapshot = await getDocs(collection(db, 'projects'));
-            const projectsData = projectsSnapshot.docs.map(doc => ({
-                id: doc.id,
-                ...doc.data()
-            }));
-
-            // Fetch user's progress for all projects
-            const progressSnapshot = await getDocs(collection(db, 'users', currentUser.uid, 'progress'));
-            const progressData = {};
-            
-            progressSnapshot.docs.forEach(doc => {
-                const { completedSteps } = doc.data();
-                const project = projectsData.find(p => p.id === doc.id);
-                progressData[doc.id] = calculateProjectProgress(project, completedSteps);
-            });
-
-            setProjects(projectsData);
-            setProgress(progressData);
-        } catch (error) {
-            console.error('Error fetching data:', error);
-        }
-    };
-
-    const fetchUserStats = async () => {
-        try {
-            // Fetch user stats from Firebase (mock data for now)
-            setStats({
-                completedProjects: 5,
-                totalTime: 24,
-                currentStreak: 3,
-                rank: 42
-            });
-        } catch (error) {
-            console.error('Error fetching user stats:', error);
-        }
-    };
-
-    const fetchUserRank = async () => {
-        try {
-            const usersRef = collection(db, 'users');
-            const usersSnapshot = await getDocs(usersRef);
-            const users = usersSnapshot.docs.map(doc => ({
-                id: doc.id,
-                ...doc.data()
-            }));
-
-            // Sort users by completed projects (you can modify this based on your ranking criteria)
-            const sortedUsers = users.sort((a, b) => 
-                (b.completedProjects || 0) - (a.completedProjects || 0)
-            );
-
-            const userRank = sortedUsers.findIndex(user => user.id === currentUser.uid) + 1;
-            setLeaderboardRank({
-                rank: userRank,
-                totalUsers: users.length
-            });
-        } catch (error) {
-            console.error('Error fetching rank:', error);
-        }
-    };
+    }, [currentUser]);
 
     const handleLogout = async () => {
         try {
@@ -183,17 +117,13 @@ export function StudentDashboard() {
         }
     };
 
-    const filteredProjects = projects
-        .sort((a, b) => 
-            difficultyOrder[a.difficulty?.toLowerCase()] - difficultyOrder[b.difficulty?.toLowerCase()]
-        )
-        .filter(project => {
-            const matchesSearch = project.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                                project.description?.toLowerCase().includes(searchTerm.toLowerCase());
-            const matchesDifficulty = filter === 'All' || 
-                                     project.difficulty?.toLowerCase() === filter.toLowerCase();
-            return matchesSearch && matchesDifficulty;
-        });
+    // Filter and search logic
+    const filteredProjects = projects.filter(project => {
+        const matchesFilter = filter === 'All' || project.difficulty === filter;
+        const matchesSearch = project.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                            project.description.toLowerCase().includes(searchTerm.toLowerCase());
+        return matchesFilter && matchesSearch;
+    });
 
     const handleFilterChange = (newFilter) => {
         setFilter(newFilter);

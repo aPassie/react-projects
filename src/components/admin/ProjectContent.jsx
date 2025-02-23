@@ -1,7 +1,7 @@
 import { useState, useCallback } from 'react';
 import MDEditor from '@uiw/react-md-editor';
 import { Editor } from '@monaco-editor/react';
-import { storage, ref, uploadBytes, getDownloadURL } from '../../config/firebase';
+import { supabase } from '../../config/supabase';
 import { v4 as uuidv4 } from 'uuid';
 
 export function ProjectContent({ 
@@ -12,66 +12,79 @@ export function ProjectContent({
   const [activeTab, setActiveTab] = useState('description');
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
 
   const handleTabChange = (e, tab) => {
     e.preventDefault(); // Prevent form submission
     setActiveTab(tab);
   };
 
-  const handleFileUpload = async (event) => {
-    const file = event.target.files[0];
-    if (!file) return;
-
-    // Check file size (5MB limit)
-    if (file.size > 5 * 1024 * 1024) {
-      setError('File size must be less than 5MB');
-      return;
-    }
-
+  const handleFileUpload = async (e) => {
     try {
       setUploading(true);
       setError('');
+      setSuccess('');
 
-      const fileExtension = file.name.split('.').pop();
-      const fileName = `${projectId}/${uuidv4()}.${fileExtension}`;
-      const storageRef = ref(storage, `projects/${fileName}`);
-      
-      // Add metadata
-      const metadata = {
-        contentType: file.type,
+      const file = e.target.files[0];
+      if (!file) return;
+
+      // Generate a unique file name
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${Math.random().toString(36).substring(2)}.${fileExt}`;
+      const filePath = `project-content/${projectId}/${fileName}`;
+
+      // Upload file to Supabase Storage
+      const { error: uploadError } = await supabase.storage
+        .from('project-files')
+        .upload(filePath, file);
+
+      if (uploadError) throw uploadError;
+
+      // Get the public URL
+      const { data: { publicUrl } } = supabase.storage
+        .from('project-files')
+        .getPublicUrl(filePath);
+
+      // Update content with new file URL
+      const updatedContent = {
+        ...content,
+        files: [...(content.files || []), { name: file.name, url: publicUrl }]
       };
 
-      await uploadBytes(storageRef, file, metadata);
-      const downloadURL = await getDownloadURL(storageRef);
-
-      // Update content based on file type
-      const fileType = file.type.split('/')[0];
-      if (fileType === 'image') {
-        onUpdate({
-          ...content,
-          images: [...(content.images || []), { url: downloadURL, caption: file.name }]
-        });
-      } else if (fileType === 'video') {
-        onUpdate({
-          ...content,
-          videos: [...(content.videos || []), { url: downloadURL, title: file.name }]
-        });
-      } else {
-        onUpdate({
-          ...content,
-          resources: [...(content.resources || []), { url: downloadURL, name: file.name, type: fileType }]
-        });
-      }
+      onUpdate(updatedContent);
+      setSuccess('File uploaded successfully!');
     } catch (err) {
-      console.error('Upload error:', err);
-      setError(
-        'Failed to upload file: ' + 
-        (err.message || 'Please check your Firebase configuration and try again')
-      );
+      setError('Failed to upload file: ' + err.message);
     } finally {
       setUploading(false);
-      // Reset the file input
-      event.target.value = '';
+    }
+  };
+
+  const handleRemoveFile = async (fileUrl) => {
+    try {
+      setError('');
+      setSuccess('');
+
+      // Extract the file path from the URL
+      const filePath = fileUrl.split('/').slice(-2).join('/');
+
+      // Delete file from Supabase Storage
+      const { error: deleteError } = await supabase.storage
+        .from('project-files')
+        .remove([filePath]);
+
+      if (deleteError) throw deleteError;
+
+      // Update content by removing the file
+      const updatedContent = {
+        ...content,
+        files: content.files.filter(file => file.url !== fileUrl)
+      };
+
+      onUpdate(updatedContent);
+      setSuccess('File removed successfully!');
+    } catch (err) {
+      setError('Failed to remove file: ' + err.message);
     }
   };
 
@@ -88,8 +101,13 @@ export function ProjectContent({
   return (
     <div className="space-y-6">
       {error && (
-        <div className="bg-red-500/10 border border-red-500/50 text-red-500 p-4 rounded-lg">
+        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
           {error}
+        </div>
+      )}
+      {success && (
+        <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded">
+          {success}
         </div>
       )}
 
@@ -324,6 +342,76 @@ export function ProjectContent({
           </div>
         </div>
       )}
+
+      <div className="space-y-4">
+        <div>
+          <label className="block text-sm font-medium text-gray-700">Project Files</label>
+          <p className="mt-1 text-sm text-gray-500">
+            Upload any additional files needed for this project (images, starter code, etc.)
+          </p>
+          <div className="mt-2">
+            <label className="block">
+              <span className="sr-only">Choose file</span>
+              <input
+                type="file"
+                onChange={handleFileUpload}
+                disabled={uploading}
+                className={`block w-full text-sm text-gray-500
+                  file:mr-4 file:py-2 file:px-4
+                  file:rounded-lg file:border-0
+                  file:text-sm file:font-semibold
+                  file:bg-blue-50 file:text-blue-700
+                  hover:file:bg-blue-100
+                  ${uploading ? 'opacity-50 cursor-not-allowed' : ''}`}
+              />
+            </label>
+          </div>
+        </div>
+
+        {content.files?.length > 0 && (
+          <div className="mt-4">
+            <h4 className="text-sm font-medium text-gray-700 mb-2">Uploaded Files</h4>
+            <ul className="divide-y divide-gray-200">
+              {content.files.map((file, index) => (
+                <li key={index} className="py-3 flex justify-between items-center">
+                  <div className="flex items-center">
+                    <svg
+                      className="h-5 w-5 text-gray-400"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                      />
+                    </svg>
+                    <span className="ml-2 flex-1 w-0 truncate">
+                      <a
+                        href={file.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-blue-600 hover:text-blue-700"
+                      >
+                        {file.name}
+                      </a>
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => handleRemoveFile(file.url)}
+                    className="ml-4 text-red-600 hover:text-red-700"
+                  >
+                    Remove
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+      </div>
     </div>
   );
 } 
